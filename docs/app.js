@@ -140,9 +140,12 @@ function renderRelease(found) {
   const { release, asset } = found;
   putText("release-name", release.name || release.tag_name || asset.name);
   putText("release-meta", `APK · ${formatSize(asset.size)} · ${formatDate(release.published_at || release.created_at)}`);
-  putText("release-status", "APK ready for direct download from GitHub Releases.");
-  putText("release-badge", release.prerelease ? "BETA" : "RELEASE");
-  putText("release-cta", "Download APK");
+  const temporary = release.tag_name === "ci-preview";
+  putText("release-status", temporary
+    ? "Temporary test-signed APK. Install it once, then later builds signed with the same key can update it. Builds signed with an older key require a one-time reinstall."
+    : "APK ready for direct download from GitHub Releases.");
+  putText("release-badge", temporary ? "TEST BETA" : (release.prerelease ? "BETA" : "RELEASE"));
+  putText("release-cta", temporary ? "Download test APK" : "Download APK");
   setLink($("#release-download"), asset.browser_download_url);
   setLink($("#release-fallback"), `${PROJECT_URL}/releases`);
   $("#release-fallback").firstChild.textContent =  "All Releases ";
