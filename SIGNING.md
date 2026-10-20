@@ -53,11 +53,11 @@ Run the `Centaurix Android APK` workflow from **Actions → Run workflow** (bran
 To publish a public GitHub Release, tag the current commit with the version in `app/build.gradle.kts`:
 
 ```sh
-git tag v1.0.0-beta6
-git push origin v1.0.0-beta6
+git tag v1.0.0-beta7
+git push origin v1.0.0-beta7
 ```
 
-The workflow checks that the tag matches `versionName`, and then uploads `Centaurix-1.0.0-beta6.apk` directly to the GitHub Release.
+The workflow checks that the tag matches `versionName`, and then uploads `Centaurix-1.0.0-beta7.apk` directly to the GitHub Release.
 
 For every later version, **increase versionCode**, adjust `versionName`, and use the **same private key** and password. Do not rotate or delete the signing key.
 
@@ -81,3 +81,24 @@ After initial key creation, the workflow publishes an APK to the public `ci-prev
 **Limitations:** GitHub caches can be evicted. If the key disappears, the workflow intentionally stops publishing rather than silently changing certificates. Previously installed APKs signed with another key cannot be updated by this new key. One final reinstall is required to switch signing identity. Do not upload or commit the private key or its password.
 
 Long-term stable app distribution still requires the permanent signing secrets explained above.
+
+## 4. In-app update delivery
+
+Centaurix checks the public GitHub Releases metadata on launch. If a compatible update
+has a greater Android `versionCode`, it displays a full-screen in-app prompt and lets
+the user install the downloaded APK. Before handing it to Android, Centaurix checks the
+APK's SHA-256 against the metadata published in the same GitHub Actions build.
+Android still enforces its own APK signing-certificate check.
+
+GitHub Actions publishes `update.json` with the APK for each distribution channel:
+
+- `ci-preview` / `temp`: automatically published on `main` when the pinned
+  temporary test-signing key is available.
+- `ci-current` / `permanent`: automatically published on `main` when the permanent
+  signing secrets are configured.
+- `vX.Y.Z` tags / `permanent`: versioned signed GitHub Releases.
+
+Apps only offer updates from their own channel. Android 8+ requires users to permit
+installation from Centaurix once. The full-screen prompt appears when the app is
+opened, not as a system notification while Centaurix is closed. GitHub API access
+and a stable signing certificate are required for the update path to work.
