@@ -17,7 +17,7 @@ const menuToggle = $(".menu-toggle");
 menuToggle?.addEventListener("click", () => {
   const expanded = menuToggle.getAttribute("aria-expanded") === "true";
   menuToggle.setAttribute("aria-expanded", String(!expanded));
-  menuToggle.setAttribute("aria-label", expanded ? "Ouvrir le menu" : "Fermer le menu");
+  menuToggle.setAttribute("aria-label", expanded ? "Open menu" : "Close menu");
   navigation.classList.toggle("is-open", !expanded);
 });
 navigation?.querySelectorAll("a").forEach((link) => {
@@ -95,15 +95,15 @@ async function githubJson(path, timeoutMs = 9000) {
 }
 
 function formatSize(size) {
-  if (!Number.isFinite(size) || size < 0) return "Taille inconnue";
-  return `${(size / (1024 * 1024)).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo`;
+  if (!Number.isFinite(size) || size < 0) return "Unknown size";
+  return `${(size / (1024 * 1024)).toLocaleString("en-US", { maximumFractionDigits: 1 })} MB`;
 }
 
 function formatDate(value) {
   const date = value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime())
-    ? new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(date)
-    : "Date inconnue";
+    ? new Intl.DateTimeFormat("en-US", { day: "numeric", month: "long", year: "numeric" }).format(date)
+    : "Unknown date";
 }
 
 function latestRelease(releases) {
@@ -140,33 +140,33 @@ function renderRelease(found) {
   const { release, asset } = found;
   putText("release-name", release.name || release.tag_name || asset.name);
   putText("release-meta", `APK · ${formatSize(asset.size)} · ${formatDate(release.published_at || release.created_at)}`);
-  putText("release-status", "APK disponible en téléchargement direct depuis GitHub Releases.");
-  putText("release-badge", release.prerelease ? "BÊTA" : "RELEASE");
-  putText("release-cta", "Télécharger l'APK");
+  putText("release-status", "APK ready for direct download from GitHub Releases.");
+  putText("release-badge", release.prerelease ? "BETA" : "RELEASE");
+  putText("release-cta", "Download APK");
   setLink($("#release-download"), asset.browser_download_url);
   setLink($("#release-fallback"), `${PROJECT_URL}/releases`);
-  $("#release-fallback").firstChild.textContent = "Toutes les Releases ";
+  $("#release-fallback").firstChild.textContent =  "All Releases ";
 }
 
 function renderArtifact(artifact) {
   const workflowPage = `${PROJECT_URL}/actions/runs/${artifact.workflow_run.id}`;
   putText("release-name", artifact.name);
-  putText("release-meta", `Archive ZIP · ${formatSize(artifact.size_in_bytes)} · ${formatDate(artifact.created_at)}`);
-  putText("release-status", "Pas encore de Release APK. Ce build est dans les Artifacts GitHub Actions : ouvrez le run et téléchargez son ZIP (connexion GitHub parfois nécessaire).");
+  putText("release-meta", `ZIP archive · ${formatSize(artifact.size_in_bytes)} · ${formatDate(artifact.created_at)}`);
+  putText("release-status", "No APK Release yet. This build is available through GitHub Actions: open the run and download its ZIP artifact (GitHub sign-in may be required).");
   putText("release-badge", "ACTIONS");
-  putText("release-cta", "Ouvrir le build");
+  putText("release-cta", "View build");
   setLink($("#release-download"), workflowPage);
   setLink($("#release-fallback"), `${PROJECT_URL}/actions`);
 }
 
 function renderFallback(hadApiError) {
-  putText("release-name", "Centaurix pour Android");
-  putText("release-meta", "Builds et publications GitHub");
+  putText("release-name", "Centaurix for Android");
+  putText("release-meta", "GitHub builds and releases");
   putText("release-status", hadApiError
-    ? "Impossible de consulter GitHub pour le moment (réseau ou limite API). Retrouvez les versions sur le dépôt."
-    : "Aucun APK public trouvé pour l'instant. Consultez les builds sur GitHub Actions.");
+    ? "Unable to reach GitHub right now (network issue or API rate limit). You can still find builds in the repository."
+    : "No public APK is available yet. Check GitHub Actions for builds.");
   putText("release-badge", "GITHUB");
-  putText("release-cta", "Voir les versions");
+  putText("release-cta", "Browse versions");
   setLink($("#release-download"), `${PROJECT_URL}/actions`);
   setLink($("#release-fallback"), `${PROJECT_URL}/releases`);
 }
