@@ -408,7 +408,7 @@ class MainActivity:ComponentActivity(){
                 Icon(if(ble.notice.contains("✅"))Icons.Rounded.CheckCircle else Icons.Rounded.Info,
                     null,tint=if(ble.notice.contains("✅"))Mint else Gold)
                 Spacer(Modifier.width(9.dp))
-                Text(ble.notice,fontSize=12.sp,color=TextMain)
+                Text(tr(ble.notice),fontSize=12.sp,color=TextMain)
             }
         }
         Spacer(Modifier.height(13.dp))
@@ -502,7 +502,7 @@ class MainActivity:ComponentActivity(){
     }
     if(ble.pendingAction.isNotBlank() || ble.notice.contains("VPC") || ble.notice.contains("Échec")) {
         Surface(color=Gold.copy(alpha=.09f),shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth()){
-            Text(ble.notice,color=GoldLight,fontSize=12.sp,
+            Text(tr(ble.notice),color=GoldLight,fontSize=12.sp,
                 modifier=Modifier.padding(13.dp))
         }
         Spacer(Modifier.height(10.dp))
@@ -556,7 +556,7 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(14.dp))
     Panel{
-        Text(tr("Collections officielles"),fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Thèmes de la box"),fontSize=18.sp,fontWeight=FontWeight.Bold)
         Text(tr("Illustration"),fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(16.dp))
         val previews=listOf("Aube","Brume","Nébuleuse","Magma","Minuit")

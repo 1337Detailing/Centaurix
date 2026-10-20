@@ -116,11 +116,58 @@ object CentaurixUi {
         "Journal & confidentialité" to listOf("Diagnostics", "Diagnose", "Диагностика", "Diagnostyka"),
         "Historique local" to listOf("Local history", "Lokaler Verlauf", "Локальная история", "Historia lokalna")
     )
+    private val additionalStrings=mapOf(
+        "Permissions nécessaires" to listOf("Permissions required", "Berechtigungen erforderlich", "Нужны разрешения", "Wymagane uprawnienia"),
+        "Compris" to listOf("OK", "OK", "Понятно", "Rozumiem"),
+        "Ta BT200 n'est pas connectée" to listOf("BT200 disconnected", "BT200 nicht verbunden", "BT200 не подключён", "BT200 rozłączony"),
+        "Active le Bluetooth dans le menu de la box, puis confirme avec le bouton central." to listOf("Enable Bluetooth on your BT200.", "Bluetooth am BT200 aktivieren.", "Включите Bluetooth на BT200.", "Włącz Bluetooth w BT200."),
+        "MODE" to listOf("MODE", "MODUS", "РЕЖИМ", "TRYB"),
+        "Profil" to listOf("Profile", "Profil", "Профиль", "Profil"),
+        "Cette courbe répartit la puissance sur 8 étapes." to listOf("8 power points.", "8 Leistungsstufen.", "8 точек мощности.", "8 punktów mocy."),
+        "Enregistrer sur la BT200 ?" to listOf("Save to BT200?", "Auf BT200 speichern?", "Сохранить на BT200?", "Zapisać na BT200?"),
+        "Cette opération effacera ses réglages enregistrés sur la BT200." to listOf("Device profile settings will be reset.", "Geräteprofil wird zurückgesetzt.", "Настройки профиля будут сброшены.", "Profil urządzenia zostanie zresetowany."),
+        "Réinitialiser" to listOf("Reset", "Zurücksetzen", "Сбросить", "Resetuj"),
+        "Activer la courbe VPC ?" to listOf("Save VPC curve?", "VPC-Kurve speichern?", "Сохранить кривую VPC?", "Zapisać krzywą VPC?"),
+        "Collections officielles" to listOf("Device themes", "Gerätethemen", "Темы устройства", "Motywy urządzenia"),
+        "Diagnostics : lectures du compteur" to listOf("Counter readings", "Zählerstände", "Показания счётчика", "Odczyty licznika"),
+        "Valeurs cumulatives brutes (pas les puffs de chaque jour). Voir Puffs pour le suivi quotidien." to listOf("Cumulative device counter.", "Kumulativer Gerätezähler.", "Общий счётчик устройства.", "Całkowity licznik urządzenia."),
+        "Effacer l'historique ?" to listOf("Clear history?", "Verlauf löschen?", "Очистить историю?", "Wyczyścić historię?"),
+        "Les données enregistrées sur le téléphone seront supprimées, sans modifier la BT200." to listOf("Delete local data only?", "Nur lokale Daten löschen?", "Удалить локальные данные?", "Usunąć dane lokalne?"),
+        "Effacer" to listOf("Clear", "Löschen", "Очистить", "Wyczyść"),
+        "bouffées observées" to listOf("puffs recorded", "Züge erfasst", "Учтено затяжек", "Zaciągnięć zapisano"),
+        "Aucune lecture enregistrée ce mois-là." to listOf("No readings for this month.", "Keine Daten für diesen Monat.", "Нет показаний за месяц.", "Brak odczytów w tym miesiącu."),
+        "Supprimer le suivi ?" to listOf("Delete tracking history?", "Verlauf löschen?", "Удалить историю?", "Usunąć historię?"),
+        "Les relevés journaliers locaux seront supprimés. Le compteur de la BT200 ne sera pas modifié." to listOf("Delete local history only?", "Nur lokale Statistik löschen?", "Удалить локальную историю?", "Usunąć lokalną historię?"),
+        "Supprimer" to listOf("Delete", "Löschen", "Удалить", "Usuń"),
+        "Associer la BT200" to listOf("Pair BT200", "BT200 koppeln", "Подключить BT200", "Sparuj BT200"),
+        "Sur la box : Bluetooth ON + validation avec le bouton central." to listOf("Enable Bluetooth on BT200.", "Bluetooth am BT200 aktivieren.", "Включите Bluetooth на BT200.", "Włącz Bluetooth w BT200."),
+        "Connecter la Centaurus BT200" to listOf("Connect BT200", "BT200 verbinden", "Подключить BT200", "Połącz BT200"),
+        "Temps brut" to listOf("Usage time", "Nutzungsdauer", "Время использования", "Czas użytkowania"),
+        "Profil actif" to listOf("Active profile", "Aktives Profil", "Активный профиль", "Aktywny profil"),
+        "Rechercher la BT200" to listOf("Find BT200", "BT200 suchen", "Найти BT200", "Znajdź BT200"),
+        "Choisir et transférer une image" to listOf("Upload wallpaper", "Hintergrundbild hochladen", "Загрузить обои", "Prześlij tapetę"),
+        "Relancer le scan" to listOf("Rescan", "Erneut suchen", "Повторить поиск", "Skanuj ponownie"),
+        "Box (total)" to listOf("Device total", "Gerätegesamtzahl", "Всего на устройстве", "Licznik urządzenia"),
+        "7 jours" to listOf("7 days", "7 Tage", "7 дней", "7 dni"),
+        "30 jours" to listOf("30 days", "30 Tage", "30 дней", "30 dni"),
+        "Mettre à jour" to listOf("Refresh", "Aktualisieren", "Обновить", "Odśwież"),
+        "Déconnectée" to listOf("Disconnected", "Getrennt", "Отключено", "Rozłączono"),
+        "Réglage accepté. Vérification sur la box…" to listOf("Checking saved profile…", "Profil wird geprüft…", "Проверка профиля…", "Sprawdzanie profilu…"),
+        "Synchronisation en cours…" to listOf("Syncing…", "Synchronisiere…", "Синхронизация…", "Synchronizowanie…"),
+        "Envoi du profil • attente de confirmation" to listOf("Saving profile…", "Profil wird gespeichert…", "Сохранение профиля…", "Zapisywanie profilu…"),
+        "Courbe VPC enregistrée et relue ✅" to listOf("VPC curve saved ✅", "VPC-Kurve gespeichert ✅", "Кривая VPC сохранена ✅", "Krzywa VPC zapisana ✅")
+    )
     fun text(key:String):String {
         val code=code()
         if(code=="fr")return key
         val position=when(code){"de"->1;"ru"->2;"pl"->3;else->0}
-        return strings[key]?.get(position) ?: key
+        val known=strings[key] ?: additionalStrings[key]
+        if(known!=null)return known[position]
+        val count=Regex("^(\\\\d+) bouffées$").matchEntire(key)
+        if(count!=null)return count.groupValues[1]+" "+(strings["Bouffées"]?.get(position) ?: "puffs")
+        val profile=Regex("^Profil (\\\\d+)$").matchEntire(key)
+        if(profile!=null)return (additionalStrings["Profil"]?.get(position) ?: "Profile")+" "+profile.groupValues[1]
+        return key
     }
     val dark:Boolean get()=when(theme) {"light"->false;"dark","amoled"->true;else->systemDark}
     fun palette():CentaurixPalette {
