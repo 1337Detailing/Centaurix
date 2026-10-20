@@ -44,7 +44,7 @@ class PuffLedger {
             baseline=State(date,counter,time,now)
             return Outcome(forDay(date).puffs,forDay(date).time,unassignedPuffs,unassignedTime,false,true)
         }
-        val reset=previous!=null&&(counter<previous.counter || time<previous.time)
+        val reset=previous!=null && counter<previous.counter
         val delta=if(previous==null || reset)0L else (counter-previous.counter).coerceAtLeast(0)
         val deltaTime=if(previous==null || reset)0L else (time-previous.time).coerceAtLeast(0)
         val sameDay=previous!=null && previous.date==date

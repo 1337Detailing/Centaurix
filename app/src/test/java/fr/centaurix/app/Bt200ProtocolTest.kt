@@ -7,6 +7,25 @@ class Bt200ProtocolTest {
     private fun hex(s:String)=s.chunked(2).map{it.toInt(16).toByte()}.toByteArray()
     private val real=hex("AA558116005C6101000000000000000001010100000500000000039480")
 
+    @Test fun powerWritesAcceptZeroUnusedFields() {
+        // Hardware profile readbacks may use 0 for voltage/boost in Power mode.
+        val p=Bt200Protocol.Profile(slot=1,mode=1,coil=.90,watts=69,temperature=0,
+            voltage=0.0,boost=0)
+        val encoded=Bt200Protocol.saveProfile(p)
+        assertEquals(10,Bt200Protocol.u16(encoded,3))
+        assertEquals(69,Bt200Protocol.u16(encoded,9))
+        assertEquals("LE",Bt200Protocol.crcOrder(encoded))
+    }
+    @Test fun turboAndVPCModeSpecificPayloads() {
+        val turbo=Bt200Protocol.saveProfile(Bt200Protocol.Profile(1,2,coil=.9,watts=69,
+            voltage=0.0,boost=1))
+        assertEquals(0x02,Bt200Protocol.u8(turbo,2))
+        assertEquals(10,Bt200Protocol.u16(turbo,3))
+        val curve=Bt200Protocol.saveCurve(Bt200Protocol.Profile(1,7,
+            curve=listOf(50,55,60,65,70,75,80,85)))
+        assertEquals(18,Bt200Protocol.u16(curve,3))
+        assertEquals("LE",Bt200Protocol.crcOrder(curve))
+    }
     @Test fun statusRequestMatchesOfficialApp() =
         assertArrayEquals(hex("AA550100007C14"),Bt200Protocol.readStatus())
 
