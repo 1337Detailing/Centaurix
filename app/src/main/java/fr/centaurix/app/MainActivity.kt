@@ -373,6 +373,20 @@ class MainActivity:ComponentActivity(){
     var edit by remember(actual,slot){
         mutableStateOf(actual ?: Bt200Protocol.Profile(slot=slot,mode=1))
     }
+    if(ble.pendingAction.isNotBlank() || ble.notice.contains("refus") ||
+       ble.notice.contains("Échec") || ble.notice.contains("confirm") ||
+       ble.notice.contains("réglage") || ble.notice.contains("Puissance") || ble.notice.contains("VPC")) {
+        Surface(color=if(ble.notice.contains("✅"))Mint.copy(alpha=.13f) else Gold.copy(alpha=.10f),
+            shape=RoundedCornerShape(15.dp),modifier=Modifier.fillMaxWidth()){
+            Row(Modifier.padding(13.dp),verticalAlignment=Alignment.CenterVertically){
+                Icon(if(ble.notice.contains("✅"))Icons.Rounded.CheckCircle else Icons.Rounded.Info,
+                    null,tint=if(ble.notice.contains("✅"))Mint else Gold)
+                Spacer(Modifier.width(9.dp))
+                Text(ble.notice,fontSize=12.sp,color=TextMain)
+            }
+        }
+        Spacer(Modifier.height(13.dp))
+    }
     Panel{
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
@@ -458,6 +472,13 @@ class MainActivity:ComponentActivity(){
     val actual=ble.profiles[slot]
     var points by remember(actual,slot) {
         mutableStateOf(actual?.curve ?: List(8){15})
+    }
+    if(ble.pendingAction.isNotBlank() || ble.notice.contains("VPC") || ble.notice.contains("Échec")) {
+        Surface(color=Gold.copy(alpha=.09f),shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth()){
+            Text(ble.notice,color=GoldLight,fontSize=12.sp,
+                modifier=Modifier.padding(13.dp))
+        }
+        Spacer(Modifier.height(10.dp))
     }
     Panel{
         Text("Courbe de puissance",fontWeight=FontWeight.Bold,fontSize=18.sp)
