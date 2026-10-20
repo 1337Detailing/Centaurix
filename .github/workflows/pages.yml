@@ -1,0 +1,48 @@
+name: Publish Centaurix website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+      - name: Enable Pages if an admin token is configured
+        env:
+          GH_TOKEN: ${{ secrets.PAGES_ADMIN_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo 'No Pages administrator token configured; attempting regular Pages deployment.'; exit 0; fi
+          if gh api "/repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            echo 'Pages site already exists.'
+          else
+            gh api --method POST "/repos/${GITHUB_REPOSITORY}/pages" --input - <<<'{"build_type":"workflow"}'
+          fi
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload static website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
