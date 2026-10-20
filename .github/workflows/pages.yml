@@ -1,4 +1,4 @@
-name: Publish Centaurix website
+name: Publish Centaurix Website
 
 on:
   push:
@@ -14,35 +14,37 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: "github-pages"
   cancel-in-progress: false
 
 jobs:
-  publish:
+  deploy:
+    name: Publish public site
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout website
-        uses: actions/checkout@v4
-      - name: Enable Pages if an admin token is configured
+      - uses: actions/checkout@v4
+      - name: Enable GitHub Pages if necessary
         env:
-          GH_TOKEN: ${{ secrets.PAGES_ADMIN_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if [ -z "$GH_TOKEN" ]; then echo 'No Pages administrator token configured; attempting regular Pages deployment.'; exit 0; fi
-          if gh api "/repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
-            echo 'Pages site already exists.'
+          set -euo pipefail
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            echo "GitHub Pages is already enabled."
           else
-            gh api --method POST "/repos/${GITHUB_REPOSITORY}/pages" --input - <<<'{"build_type":"workflow"}'
+            echo "Requesting automatic GitHub Pages activation..."
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" \
+              -f build_type=workflow
           fi
-      - name: Configure Pages
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload static website
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
         with:
-          path: docs
-      - name: Deploy
+          path: './docs'
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
