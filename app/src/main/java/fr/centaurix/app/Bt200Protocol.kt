@@ -69,7 +69,7 @@ object Bt200Protocol {
     data class Theme(val slot:Int,val type:Int,val variant:Int)
     sealed class Incoming {
         data class State(val value:Status):Incoming()
-        data class ProfileValue(val value:Profile):Incoming()
+        data class ProfileValue(val value:Profile,val responseOpcode:Int):Incoming()
         data class ThemeValue(val value:Theme):Incoming()
         data class Ack(val opcode:Int, val success:Boolean, val code:Int):Incoming()
         data class TransferAck(val opcode:Int, val index:Int, val success:Boolean):Incoming()
@@ -89,11 +89,11 @@ object Bt200Protocol {
             }
             0x83,0x86 -> if(p.size>=2) {
                 val slot=u8(p,0).coerceIn(1,3); val mode=u8(p,1)
-                if(mode==7 && p.size>=18) return Incoming.ProfileValue(Profile(slot,mode,curve=(0 until 8).map { u16(p,2+it*2) }))
+                if(mode==7 && p.size>=18) return Incoming.ProfileValue(Profile(slot,mode,curve=(0 until 8).map { u16(p,2+it*2) }),opcode)
                 if(p.size>=10) {
                     val temp=u16(p,6)
                     return Incoming.ProfileValue(Profile(slot,mode,u16(p,2)/100.0,u16(p,4),
-                        temp and 0x7fff,temp and 0x8000 !=0,u8(p,8)/10.0,u8(p,9)))
+                        temp and 0x7fff,temp and 0x8000 !=0,u8(p,8)/10.0,u8(p,9)),opcode)
                 }
             }
             0x87 -> if(p.size>=3) return Incoming.ThemeValue(Theme(u8(p,0),u8(p,1),u8(p,2)))

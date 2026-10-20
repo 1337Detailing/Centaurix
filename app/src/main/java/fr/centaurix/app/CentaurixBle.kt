@@ -52,6 +52,7 @@ class CentaurixBle(private val context:Context) {
     private var writeEpoch=0
     private var requestedProfile:Bt200Protocol.Profile?=null
     private var confirmedWriteAck=false
+    private var modeActivationQueued=false
     private val puffStore=PuffHistoryStore(context)
     private var puffLedger=puffStore.load(prefs.getString("device","") ?: "")
     val puffDays=mutableStateListOf<PuffLedger.Day>()
@@ -60,6 +61,7 @@ class CentaurixBle(private val context:Context) {
     var devicePuffCounter by mutableLongStateOf(0L); private set
     var trackingSince by mutableStateOf(""); private set
     private var savedPuffs=Long.MIN_VALUE
+    private var savedUseTime=Long.MIN_VALUE
     private var savedDay=""
     init { refreshPuffScreen() }
     private fun refreshPuffScreen() {
@@ -75,16 +77,16 @@ class CentaurixBle(private val context:Context) {
         val result=puffLedger.accept(day,v.puffs,v.useTime,time)
         devicePuffCounter=v.puffs
         if(result.reset)log("Compteur bouffées réinitialisé par la box : nouvelle référence.")
-        if(savedPuffs!=v.puffs || savedDay!=day || result.reset) {
+        if(savedPuffs!=v.puffs || savedUseTime!=v.useTime || savedDay!=day || result.reset) {
             puffStore.store(lastSeenId,puffLedger)
-            savedPuffs=v.puffs;savedDay=day
+            savedPuffs=v.puffs;savedUseTime=v.useTime;savedDay=day
         }
         refreshPuffScreen()
     }
     fun clearPuffTracking() {
         puffLedger.clear()
         puffStore.store(lastSeenId,puffLedger)
-        savedPuffs=Long.MIN_VALUE;savedDay=""
+        savedPuffs=Long.MIN_VALUE;savedUseTime=Long.MIN_VALUE;savedDay=""
         refreshPuffScreen()
         say("Suivi local des bouffées effacé")
     }
@@ -185,6 +187,7 @@ class CentaurixBle(private val context:Context) {
             lastSeenId=d.address
             puffLedger=puffStore.load(lastSeenId)
             savedPuffs=Long.MIN_VALUE
+            savedUseTime=Long.MIN_VALUE
             savedDay=""
             ui { refreshPuffScreen() }
             prefs.edit().putString("device",lastSeenId).apply()
@@ -205,7 +208,7 @@ class CentaurixBle(private val context:Context) {
         cancelUploadState()
         notificationSetup=false
         tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false;writeEpoch++
-        requestedProfile=null;confirmedWriteAck=false
+        requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
         val old=gatt; gatt=null
         try{old?.disconnect();old?.close()}catch(_:Exception){}
         ui{connected=false;connection="Déconnectée";busy=false;pendingAction=""}
@@ -363,7 +366,7 @@ class CentaurixBle(private val context:Context) {
                     }
                     is Bt200Protocol.Incoming.ProfileValue -> {
                         profiles[incoming.value.slot]=incoming.value
-                        verifyProfileReadback(incoming.value)
+                        verifyProfileReadback(incoming.value,incoming.responseOpcode)
                     }
                     is Bt200Protocol.Incoming.ThemeValue -> themes[incoming.value.slot]=incoming.value
                     is Bt200Protocol.Incoming.Ack -> receiveAck(incoming)
@@ -373,9 +376,10 @@ class CentaurixBle(private val context:Context) {
             }
         }
     }
-    private fun verifyProfileReadback(actual:Bt200Protocol.Profile) {
+    private fun verifyProfileReadback(actual:Bt200Protocol.Profile,responseOpcode:Int) {
         val requested=requestedProfile ?: return
-        if(!confirmedWriteAck || actual.slot!=requested.slot) return
+        // 0x86 may simply echo a mode-selection command; only a true 0x83 read is evidence.
+        if(pendingAction!="save" || responseOpcode!=0x83 || actual.slot!=requested.slot) return
         val ok=actual.mode==requested.mode && if(requested.mode==7){
             actual.curve==requested.curve
         } else {
@@ -385,7 +389,7 @@ class CentaurixBle(private val context:Context) {
             notice=if(requested.mode==7)"Courbe VPC enregistrée et relue ✅"
                 else "Puissance ${actual.watts} W confirmée par la box ✅"
             log(notice)
-            pendingAction="";busy=false;requestedProfile=null;confirmedWriteAck=false
+            pendingAction="";busy=false;requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
             enqueue(Bt200Protocol.readStatus())
         } else {
             log("Relecture différente pour profil ${actual.slot}: envoyé mode=${requested.mode}, W=${requested.watts}; lu mode=${actual.mode}, W=${actual.watts}")
@@ -399,16 +403,20 @@ class CentaurixBle(private val context:Context) {
                     log("Accusé 0x82 inattendu (code=${ack.code})")
                 } else if(!ack.success) {
                     notice="La BT200 a refusé le réglage (code ${ack.code})"
-                    log(notice);busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false
+                    log(notice);busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
                 } else {
                     confirmedWriteAck=true
                     val wanted=requestedProfile!!
                     notice="Réglage accepté. Vérification sur la box…"
                     log("ACK 0x82 positif • lecture de contrôle du profil ${wanted.slot}")
-                    // Selecting the requested mode mirrors Centaurus official command 0x06.
-                    enqueue(Bt200Protocol.readMode(wanted.slot,wanted.mode))
-                    main.postDelayed({enqueue(Bt200Protocol.readProfile(wanted.slot));enqueue(Bt200Protocol.readStatus())},500)
-                    main.postDelayed({if(pendingAction=="save")enqueue(Bt200Protocol.readProfile(wanted.slot))},1700)
+                    // Apply mode once; an ACK is not required to begin later readback.
+                    if(!modeActivationQueued) {
+                        modeActivationQueued=true
+                        enqueue(Bt200Protocol.readMode(wanted.slot,wanted.mode))
+                    }
+                    main.postDelayed({
+                        if(pendingAction=="save" && requestedProfile===wanted) enqueue(Bt200Protocol.readProfile(wanted.slot))
+                    },550)
                 }
             }
             0x84 -> {
@@ -483,13 +491,29 @@ class CentaurixBle(private val context:Context) {
             val frame=if(profile.mode==7)Bt200Protocol.saveCurve(profile) else Bt200Protocol.saveProfile(profile)
             requestedProfile=profile
             confirmedWriteAck=false
+            modeActivationQueued=false
             busy=true;pendingAction="save";notice="Envoi du profil • attente de confirmation"
-            // The command is prepared with the exact 0A00 / 1200 payload structure of Centaurus.
+            // Write 0x02, select the saved mode via 0x06, then verify the actual 0x83 profile reply.
+            // Some firmware builds never emit 0x82: don't depend solely on that acknowledgment.
             enqueue(frame)
             main.postDelayed({
-                if(busy && pendingAction=="save") {
+                if(connected && pendingAction=="save" && requestedProfile===profile && !modeActivationQueued) {
+                    modeActivationQueued=true
+                    enqueue(Bt200Protocol.readMode(profile.slot,profile.mode))
+                }
+            },450)
+            listOf(1050L,2500L,4200L).forEach { delay->
+                main.postDelayed({
+                    if(connected && pendingAction=="save" && requestedProfile===profile){
+                        enqueue(Bt200Protocol.readProfile(profile.slot))
+                        if(delay==1050L)enqueue(Bt200Protocol.readStatus())
+                    }
+                },delay)
+            }
+            main.postDelayed({
+                if(busy && pendingAction=="save" && requestedProfile===profile) {
                     val hadAck=confirmedWriteAck
-                    busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false
+                    busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
                     notice=if(hadAck)"Échec de vérification : les valeurs relues diffèrent (voir journal)"
                         else "Aucun accusé de sauvegarde reçu (voir journal)"
                     log(notice)
