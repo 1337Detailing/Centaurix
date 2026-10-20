@@ -49,6 +49,7 @@ class CentaurixBle(private val context:Context) {
     private val txQueue=ArrayDeque<ByteArray>()
     private var writeBusy=false
     private var scanVersion=0
+    private var notificationSetup=false
     private var pollActive=false
     private val packetsToSave=mutableListOf<ByteArray>()
     private var uploading:List<ByteArray>?=null
@@ -157,12 +158,15 @@ class CentaurixBle(private val context:Context) {
         pollActive=false;stopScan()
         uploadSession++
         cancelUploadState()
+        notificationSetup=false
         tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false
         val old=gatt; gatt=null
         try{old?.disconnect();old?.close()}catch(_:Exception){}
         ui{connected=false;connection="Déconnectée";busy=false;pendingAction=""}
     }
     private fun subscribe(g:BluetoothGatt) {
+        if(g!==gatt || notificationSetup)return
+        notificationSetup=true
         try {
             val service=g.getService(Bt200Protocol.SERVICE)
             tx=service?.getCharacteristic(Bt200Protocol.WRITE)
@@ -183,6 +187,7 @@ class CentaurixBle(private val context:Context) {
             if(!success) say("Échec de l'abonnement BLE")
         }catch(e:Exception){say("GATT : "+e.message)}
     }
+    private fun notificationReady():Boolean = connected
     private val gattCallback=object:BluetoothGattCallback(){
         override fun onConnectionStateChange(g:BluetoothGatt,stat:Int,newState:Int) {
             if(g!==gatt){g.close();return}
@@ -204,6 +209,8 @@ class CentaurixBle(private val context:Context) {
             ui{connection="Négociation BLE…"}
             try {
                 if(!g.requestMtu(247))subscribe(g)
+                // Some BLE firmwares do not call onMtuChanged even when requestMtu() returns true.
+                main.postDelayed({if(g===gatt && !notificationReady())subscribe(g)},2500)
             }catch(_:Exception){subscribe(g)}
         }
         override fun onMtuChanged(g:BluetoothGatt,newMtu:Int,stat:Int){
