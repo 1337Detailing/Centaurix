@@ -157,11 +157,20 @@ object CentaurixUi {
         "Envoi du profil • attente de confirmation" to listOf("Saving profile…", "Profil wird gespeichert…", "Сохранение профиля…", "Zapisywanie profilu…"),
         "Courbe VPC enregistrée et relue ✅" to listOf("VPC curve saved ✅", "VPC-Kurve gespeichert ✅", "Кривая VPC сохранена ✅", "Krzywa VPC zapisana ✅")
     )
+    private val statusStrings=mapOf(
+        "BT200 • EN LIGNE" to listOf("BT200 • ONLINE", "BT200 • ONLINE", "BT200 • VERBUNDEN", "BT200 • POŁĄCZONO"),
+        "BT200 • HORS LIGNE" to listOf("BT200 • OFFLINE", "BT200 • OFFLINE", "BT200 • ОФЛАЙН", "BT200 • OFFLINE"),
+        "Synchronisé depuis la box" to listOf("Device synchronized", "Vom Gerät synchronisiert", "Синхронизировано", "Zsynchronizowano"),
+        "Lecture en attente…" to listOf("Loading profile…", "Profil wird geladen…", "Загрузка профиля…", "Ładowanie profilu…"),
+        "Pas de mesure" to listOf("No reading", "Keine Messung", "Нет измерений", "Brak pomiarów"),
+        "Recherche en cours…" to listOf("Scanning…", "Suche läuft…", "Поиск…", "Skanowanie…"),
+        "Recherche terminée" to listOf("Scan complete", "Suche abgeschlossen", "Поиск завершён", "Skanowanie zakończone")
+    )
     fun text(key:String):String {
         val code=code()
         if(code=="fr")return key
         val position=when(code){"de"->1;"ru"->2;"pl"->3;else->0}
-        val known=strings[key] ?: additionalStrings[key]
+        val known=strings[key] ?: additionalStrings[key] ?: statusStrings[key]
         if(known!=null)return known[position]
         val count=Regex("""^(\d+) bouffées$""").matchEntire(key)
         if(count!=null)return count.groupValues[1]+" "+(strings["Bouffées"]?.get(position) ?: "puffs")

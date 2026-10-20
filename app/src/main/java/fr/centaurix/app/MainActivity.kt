@@ -253,7 +253,7 @@ class MainActivity:ComponentActivity(){
                 Row(verticalAlignment=Alignment.CenterVertically){
                     Icon(Icons.Rounded.BluetoothConnected,null,tint=Gold,modifier=Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if(ble.connected)"BT200 • EN LIGNE" else "BT200 • HORS LIGNE",
+                    Text(if(ble.connected)tr("BT200 • EN LIGNE") else tr("BT200 • HORS LIGNE"),
                         color=GoldLight,fontSize=11.sp,letterSpacing=1.8.sp,fontWeight=FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
                     if(ble.connected) Text(tr("${ble.strength} dBm"),fontSize=11.sp,color=Muted)
@@ -266,7 +266,7 @@ class MainActivity:ComponentActivity(){
                     Column(horizontalAlignment=Alignment.End){
                         Text(if(ble.connected)Bt200Protocol.name(status?.mode?:1).uppercase() else "—",
                             fontWeight=FontWeight.ExtraBold,color=Gold,fontSize=15.sp)
-                        Text("PROFIL ${status?.slot ?: "—"}",color=Muted,fontSize=11.sp,letterSpacing=1.sp)
+                        Text("${tr("Profil").uppercase(CentaurixUi.locale())} ${status?.slot ?: "—"}",color=Muted,fontSize=11.sp,letterSpacing=1.sp)
                     }
                 }
                 Text(if(ble.connected)tr("Connectée") else tr("Connecter"),
@@ -417,7 +417,7 @@ class MainActivity:ComponentActivity(){
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
                 Text(tr("Profil $slot"),fontSize=21.sp,fontWeight=FontWeight.Bold)
-                Text(if(actual!=null)"Synchronisé depuis la box" else "Lecture en attente…",
+                Text(if(actual!=null)tr("Synchronisé depuis la box") else tr("Lecture en attente…"),
                     fontSize=11.sp,color=if(actual!=null)Mint else Muted)
             }
             Icon(Icons.Rounded.Equalizer,null,tint=Gold,modifier=Modifier.size(29.dp))
@@ -470,7 +470,7 @@ class MainActivity:ComponentActivity(){
             enabled=actual!=null && !ble.busy){confirm=true}
         if(confirm)AlertDialog(onDismissRequest={confirm=false},
             title={Text(tr("Enregistrer sur la BT200 ?"))},
-            text={Text("Profil $slot · ${Bt200Protocol.name(edit.mode)} · ${if(edit.mode==7)"Courbe VPC" else "${edit.watts} W"}. Tu peux revenir aux réglages précédents en relisant la box.")},
+            text={Text("${tr("Profil")} $slot · ${Bt200Protocol.name(edit.mode)} · ${if(edit.mode==7)tr("Courbe VPC") else "${edit.watts} W"}")},
             confirmButton={TextButton(onClick={confirm=false;ble.saveProfile(edit)}){Text(tr("Confirmer"))}},
             dismissButton={TextButton(onClick={confirm=false}){Text(tr("Annuler"))}})
         Spacer(Modifier.height(11.dp))
@@ -730,7 +730,7 @@ class MainActivity:ComponentActivity(){
         }
         Spacer(Modifier.height(7.dp))
         val recent=ble.logs.takeLast(12).joinToString("\n")
-        Text(recent.ifBlank{"Aucune activité"},fontSize=10.sp,lineHeight=17.sp,color=Muted)
+        Text(tr(recent.ifBlank{"Aucune activité"}),fontSize=10.sp,lineHeight=17.sp,color=Muted)
     }
     Spacer(Modifier.height(15.dp))
     Panel {
@@ -833,7 +833,7 @@ class MainActivity:ComponentActivity(){
                 Text(java.time.LocalDate.parse(selectedDay).format(
                     java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy",CentaurixUi.locale())),
                     color=Muted,fontSize=12.sp,modifier=Modifier.weight(1f))
-                Text(if(selected!=null)"${selected.puffs} puffs" else "Pas de mesure",
+                Text(if(selected!=null)tr("${selected.puffs} bouffées") else tr("Pas de mesure"),
                     color=GoldLight,fontSize=14.sp,fontWeight=FontWeight.Bold)
             }
         }
@@ -877,7 +877,7 @@ class MainActivity:ComponentActivity(){
             fontSize=12.sp,color=Muted)
         if(ble.missingDayPuffs>0L){
             Spacer(Modifier.height(8.dp))
-            Text("${ble.missingDayPuffs} puffs without a reliable date.",
+            Text(if(CentaurixUi.locale().language=="fr") "${ble.missingDayPuffs} bouffées sans date fiable." else "${ble.missingDayPuffs} puffs without a reliable date.",
                 fontSize=12.sp,color=GoldLight)
         }
         Spacer(Modifier.height(13.dp))
@@ -905,7 +905,7 @@ class MainActivity:ComponentActivity(){
                         modifier=Modifier.weight(1f))
                     IconButton(onClick={ble.stopScan();onClose()}){Icon(Icons.Rounded.Close,null)}
                 }
-                Text(if(ble.searching)"Recherche en cours…" else "Recherche terminée",
+                Text(if(ble.searching)tr("Recherche en cours…") else tr("Recherche terminée"),
                     color=Muted,fontSize=12.sp)
                 Spacer(Modifier.height(12.dp))
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState())){
