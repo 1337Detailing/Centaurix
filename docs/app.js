@@ -121,7 +121,7 @@ function latestRelease(releases) {
 function latestArtifact(payload) {
   if (!Array.isArray(payload?.artifacts)) return null;
   return payload.artifacts
-    .filter((artifact) => artifact && !artifact.expired && /centaurix/i.test(artifact.name || "") && artifact.workflow_run?.id)
+    .filter((artifact) => artifact && !artifact.expired && /^Centaurix-SIGNED-APK-/i.test(artifact.name || "") && artifact.workflow_run?.id)
     .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))[0] || null;
 }
 
@@ -164,7 +164,7 @@ function renderFallback(hadApiError) {
   putText("release-meta", "GitHub builds and releases");
   putText("release-status", hadApiError
     ? "Unable to reach GitHub right now (network issue or API rate limit). You can still find builds in the repository."
-    : "No public APK is available yet. Check GitHub Actions for builds.");
+    : "No release-signed APK is available yet. Check GitHub Actions after release signing has been configured.");
   putText("release-badge", "GITHUB");
   putText("release-cta", "Browse versions");
   setLink($("#release-download"), `${PROJECT_URL}/actions`);
