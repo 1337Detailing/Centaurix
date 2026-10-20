@@ -1,24 +1,24 @@
-# Centaurix v0.5.0
+# Centaurix
 
-App Android de diagnostic BLE pour la Lost Vape Centaurus BT200. Non affiliée au constructeur.
+Independent, offline-first Android companion for the Lost Vape Centaurus BT200. Built in Kotlin + Jetpack Compose + Material 3. Visually inspired by Cloudix: dark glasslike surfaces, soft gold accents, modular cards and five-tab navigation.
 
-## Communication prouvée
+## Available in 1.0 beta
 
-Un test sur une vraie BT200 a confirmé la détection Bluetooth, la connexion GATT, le service FFA0, les notifications et la réponse d'état à `AA550100007C14`.
+- BLE scan, stable GATT connection, notifications and framing, MTU negotiation and read polling.
+- Confirmed hardware path: service FFA0, char FFA1/FFA3, status command 01, reply 81 / CRC in big endian.
+- Live dashboard for dual batteries, active watts, active mode/profile and puffs.
+- Read and edit 3 device profiles: Power / Turbo / temperature-control SS316, TI, NI / Voltage / 8-step VPC. Save with confirmation, official reply acknowledgements and refresh. Validate within official app's ranges; no ability to fire remotely.
+- Reset a profile only after confirmation.
+- Read built-in theme metadata, switch 5 manufacturer-provided theme variants. Original-app protocol 08, reply 88.
+- Local image chooser, crop/convert to RGB565 at 240×320 and 90×120. Chunked BLE transfer (30/31/32, B0/B1/B2 acks), progress indicator and MTU check. **Experimental: requires a real hardware transfer test; don't use during critical use.**
+- Offline local history, diagnostics export, reconnect, no account or online telemetry.
 
-La v0.4 rejetait cette réponse car elle attendait le CRC16/MODBUS dans l'ordre des octets de la requête (LE). La réponse réelle utilise **l'ordre inverse BE** : CRC calculé `0x9480`, octets reçus `94 80`. La v0.5 accepte les deux ordres, sans désactiver la vérification.
+## Test status
 
-Affichage en lecture seule : pourcentages des deux accus, profil actif, mode, watts (Power/Turbo), compteur bouffées et temps rapporté par le firmware. Journaux de réponses multiparties et bouton de partage.
+The status read has been confirmed on an actual BT200 by the user (92%/97% batteries, Power mode, 5 W). Other write commands were recovered from the official Centaurus 1.0.9 APK and passed protocol unit tests. The features are **not yet claimed hardware-tested** until user confirmation on a box. Android CI runs unit tests and creates a debug APK.
 
-## Test
+## Safety
 
-BT200 : Menu > Bluetooth > ON et confirmer avec le bouton central. Fermer l'application officielle.
-Android : activer Bluetooth + Localisation, autoriser les permissions, scanner et sélectionner BT200.
+Centaurix never calls any firing command and never modifies firmware/safety limits. Power/profile changes require confirmation and input validation. Do not use beta builds for device firmware updates. Keep the official app available until all features are verified.
 
-Aucune commande de réglage, chauffe ou firmware envoyée : seule la requête de lecture d'état est utilisée.
-
-## Vérifications
-
-`javac -d /tmp/centaurix-protocol-test app/src/main/java/fr/centaurix/app/Bt200FrameCodec.java tests/ProtocolTest.java && java -cp /tmp/centaurix-protocol-test fr.centaurix.app.ProtocolTest`
-
-Le workflow GitHub Actions compile l'APK et lance les tests sur le vecteur de réponse matériel.
+Not endorsed by, affiliated with or supported by Lost Vape.
