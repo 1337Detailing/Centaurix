@@ -43,26 +43,26 @@
   <text x="72" y="79" fill="#ede8ef" font-size="17" font-family="Arial,sans-serif">9:41</text>
   <text x="252" y="135" font-size="24" font-weight="700" letter-spacing="3" fill="#fff" text-anchor="middle" font-family="Arial,sans-serif">CENTAURIX</text>
   <rect x="196" y="151" width="112" height="31" rx="16" fill="#173325"/><circle cx="216" cy="166" r="6" fill="#70e4a0"/>
-  <text x="259" y="173" text-anchor="middle" font-size="15" fill="#85e3a9" font-family="Arial,sans-serif">Connectée</text>
+  <text x="259" y="173" text-anchor="middle" font-size="15" fill="#85e3a9" font-family="Arial,sans-serif">Connected</text>
   <rect x="57" y="211" width="380" height="267" rx="30" fill="#14141c" stroke="#3c333d" stroke-width="2"/>
   <text x="81" y="249" font-size="21" fill="#fff" font-weight="700" font-family="Arial,sans-serif">Centaurus BT200</text>
-  <text x="81" y="293" font-size="16" fill="#9c97a4" font-family="Arial,sans-serif">Puissance active</text>
+  <text x="81" y="293" font-size="16" fill="#9c97a4" font-family="Arial,sans-serif">Power output</text>
   <text x="81" y="381" font-size="87" fill="#ffd479" font-weight="700" font-family="Arial,sans-serif">80</text>
   <text x="201" y="379" font-size="31" fill="#ffa65e" font-family="Arial,sans-serif">W</text>
   <rect x="83" y="408" width="318" height="9" rx="5" fill="#343039"/>
   <rect x="83" y="408" width="174" height="9" rx="5" fill="url(#warm)"/>
   <circle cx="257" cy="412" r="13" fill="#ffd187"/>
-  <text x="84" y="446" font-size="16" fill="#a4a0a9" font-family="Arial,sans-serif">Profil P1 · POWER</text>
+  <text x="84" y="446" font-size="16" fill="#a4a0a9" font-family="Arial,sans-serif">Profile P1 · POWER</text>
   <rect x="57" y="500" width="117" height="70" rx="17" fill="url(#warm)"/>
   <text x="116" y="544" font-size="18" text-anchor="middle" fill="#1b0d0d" font-weight="700" font-family="Arial,sans-serif">Wattage</text>
   <rect x="185" y="500" width="115" height="70" rx="17" fill="#1e1d27" stroke="#443c49"/>
   <text x="242" y="544" font-size="18" text-anchor="middle" fill="#ded9e2" font-family="Arial,sans-serif">VPC</text>
   <rect x="310" y="500" width="126" height="70" rx="17" fill="#1e1d27" stroke="#443c49"/>
-  <text x="373" y="544" font-size="18" text-anchor="middle" fill="#ded9e2" font-family="Arial,sans-serif">Profils</text>
+  <text x="373" y="544" font-size="18" text-anchor="middle" fill="#ded9e2" font-family="Arial,sans-serif">Profiles</text>
   <rect x="57" y="590" width="380" height="217" rx="28" fill="#16141e" stroke="#39303f"/>
-  <text x="79" y="633" font-size="18" fill="#afa9b3" font-family="Arial,sans-serif">PUFFS AUJOURD'HUI</text>
+  <text x="79" y="633" font-size="18" fill="#afa9b3" font-family="Arial,sans-serif">PUFFS TODAY</text>
   <text x="79" y="711" font-size="63" fill="#ffffff" font-weight="700" font-family="Arial,sans-serif">127</text>
-  <text x="233" y="710" font-size="18" fill="#ffb77b" font-family="Arial,sans-serif">bouffées</text>
+  <text x="233" y="710" font-size="18" fill="#ffb77b" font-family="Arial,sans-serif">puffs</text>
   <path d="M80 755h331" stroke="#55505a" stroke-opacity=".4"/>
   <g fill="url(#warm)">
     <rect x="81" y="749" width="17" height="28" rx="5"/><rect x="110" y="739" width="17" height="38" rx="5"/>
@@ -74,7 +74,7 @@
   </g>
   <path d="M69 864h354" stroke="#453c47" stroke-width="2"/>
   <g font-family="Arial,sans-serif" font-size="15" text-anchor="middle" fill="#9d95a5">
-    <text x="100" y="901">Accueil</text><text x="197" y="901">Profils</text><text x="294" y="901">Puffs</text><text x="386" y="901">Plus</text>
+    <text x="100" y="901">Home</text><text x="197" y="901">Profiles</text><text x="294" y="901">Puffs</text><text x="386" y="901">More</text>
   </g>
   <path d="M79 839l19-16 19 16h-6v17H85v-17z" fill="#ffb763"/>
   <path d="M186 839h23m-23 10h23" stroke="#9e96a4" stroke-width="3"/>

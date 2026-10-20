@@ -43,9 +43,9 @@ def main():
     font_regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
     font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
     d.text((66, 105), "CENTAURIX", fill="#ffb664", font=ImageFont.truetype(font_bold, 31))
-    d.text((66, 240), "Plus de controle.", fill="#ffffff", font=ImageFont.truetype(font_bold, 52))
-    d.text((66, 317), "Plus de liberte.", fill="#ff9558", font=ImageFont.truetype(font_bold, 52))
-    d.text((67, 450), "Votre BT200. Votre experience.", fill="#c4b7c5", font=ImageFont.truetype(font_regular, 22))
+    d.text((66, 240), "More control.", fill="#ffffff", font=ImageFont.truetype(font_bold, 52))
+    d.text((66, 317), "More freedom.", fill="#ff9558", font=ImageFont.truetype(font_bold, 52))
+    d.text((67, 450), "Your BT200. Your experience.", fill="#c4b7c5", font=ImageFont.truetype(font_regular, 22))
     webp(og.convert("RGB"), "og-preview.webp", 82)
 
 
