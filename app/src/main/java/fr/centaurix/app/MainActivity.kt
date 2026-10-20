@@ -400,7 +400,9 @@ class MainActivity:ComponentActivity(){
         Text("MODE",color=Muted,letterSpacing=1.6.sp,fontSize=11.sp)
         Spacer(Modifier.height(7.dp))
         ModePicker(edit.mode){ mode->
-            edit=edit.copy(mode=mode,watts=if(mode in 3..5)edit.watts.coerceAtMost(100) else edit.watts)
+            edit=edit.copy(mode=mode,watts=if(mode in 3..5)edit.watts.coerceAtMost(100) else edit.watts,
+                boost=if(mode==2)edit.boost.coerceIn(1,3) else edit.boost,
+                voltage=if(mode==6 && edit.voltage<0.7)3.7 else edit.voltage)
         }
         Spacer(Modifier.height(14.dp))
         if(edit.mode==7){
