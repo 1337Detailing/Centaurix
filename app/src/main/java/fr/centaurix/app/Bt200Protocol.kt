@@ -111,8 +111,12 @@ object Bt200Protocol {
         require(profile.mode!=7) { "Use saveCurve for VPC" }
         require(profile.coil in 0.0..10.0)
         require(profile.watts in 5..200)
-        require(profile.voltage in 0.7..8.0)
-        require(profile.boost in 1..3)
+        // Fields unused in Power/TC can legitimately be zero in actual BT200 profile replies.
+        // The old unconditional validation silently prevented saving Power profiles.
+        require(profile.voltage in 0.0..8.0)
+        require(profile.boost in 0..3)
+        if (profile.mode==6) require(profile.voltage in 0.7..8.0)
+        if (profile.mode==2) require(profile.boost in 1..3)
         if (profile.mode in 3..5) require(profile.watts<=100)
         if (profile.mode in 3..5) require(if (profile.fahrenheit) profile.temperature in 200..600 else profile.temperature in 100..315)
         val rawTemp=(profile.temperature and 0x7fff) or (if(profile.fahrenheit) 0x8000 else 0)
