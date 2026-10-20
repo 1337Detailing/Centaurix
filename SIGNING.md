@@ -70,3 +70,14 @@ keytool -list -v -storetype PKCS12 -keystore centaurix-release.p12 -alias centau
 The SHA-256 certificate fingerprint must remain the same in every new release. You can also inspect the built APK using Android SDK's `apksigner verify --print-certs app-release.apk`.
 
 If you only have Android, Java's `keytool` is also available through Termux with `pkg install openjdk-17`. Keep the `.p12` secure and backed up outside Termux before changing devices.
+
+
+## Automatic temporary GitHub beta signing (no manual secrets)
+
+When permanent GitHub signing secrets are not configured, the main branch workflow creates a **temporary** PKCS#12 key in an Actions cache and pins its public SHA-256 certificate fingerprint in `.github/centaurix-temp-signing.sha256`. All subsequent APKs must match that fingerprint.
+
+After initial key creation, the workflow publishes an APK to the public `ci-preview` pre-release, where the Centaurix website can link directly to it. The APK is test-signed, not production-signed.
+
+**Limitations:** GitHub caches can be evicted. If the key disappears, the workflow intentionally stops publishing rather than silently changing certificates. Previously installed APKs signed with another key cannot be updated by this new key. One final reinstall is required to switch signing identity. Do not upload or commit the private key or its password.
+
+Long-term stable app distribution still requires the permanent signing secrets explained above.

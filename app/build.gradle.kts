@@ -19,7 +19,9 @@ android {
         minSdk = 26
         targetSdk = 35
         // Always increase versionCode for updates. Never reset it.
-        versionCode = 106
+        // In CI, use a monotonically increasing number so newer APKs replace older builds.
+        versionCode = providers.environmentVariable("CENTAURIX_CI_VERSION_CODE")
+            .orNull?.toIntOrNull() ?: 106
         versionName = "1.0.0-beta6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
