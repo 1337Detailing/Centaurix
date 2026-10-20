@@ -38,6 +38,7 @@ jobs:
         run: gradle --no-daemon :app:testDebugUnitTest
 
       - name: Determine signing mode
+        if: github.event_name != 'pull_request'
         id: signing
         shell: bash
         env:
