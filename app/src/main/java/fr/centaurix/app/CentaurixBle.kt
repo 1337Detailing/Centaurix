@@ -95,6 +95,7 @@ class CentaurixBle(private val context:Context) {
     private var scanVersion=0
     private var notificationSetup=false
     private var pollActive=false
+    private var pollGeneration=0
     private var retryAllowed=false
     private var reconnectFailures=0
     private var retryTask:Runnable?=null
@@ -250,10 +251,13 @@ class CentaurixBle(private val context:Context) {
     }
     private fun clearGatt() {
         pollActive=false
+        pollGeneration++
         uploadSession++
         cancelUploadState()
         notificationSetup=false
-        tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false;writeEpoch++
+        tx=null;rx=null;stream.clear()
+        synchronized(txQueue){txQueue.clear();writeBusy=false}
+        writeEpoch++
         requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
         val old=gatt;gatt=null
         try{old?.disconnect();old?.close()}catch(_:Exception){}
@@ -348,11 +352,12 @@ class CentaurixBle(private val context:Context) {
         }
     }
     private fun schedulePoll(){
+        val generation=pollGeneration
         main.postDelayed({
-            if(pollActive && connected && !transferOngoing) {
-                enqueue(Bt200Protocol.readStatus())
+            if(generation==pollGeneration && pollActive) {
+                if(connected && !transferOngoing)enqueue(Bt200Protocol.readStatus())
                 schedulePoll()
-            } else if(pollActive) schedulePoll()
+            }
         },15000)
     }
     private fun enqueue(bytes:ByteArray){
