@@ -10,8 +10,8 @@ android {
         applicationId = "fr.centaurix.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 102
-        versionName = "1.0.0-beta2"
+        versionCode = 103
+        versionName = "1.0.0-beta3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
