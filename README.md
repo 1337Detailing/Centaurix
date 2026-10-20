@@ -26,3 +26,7 @@ Download debug builds from GitHub Actions **Artifacts**.
 The BT200 provides cumulative puff counts, not timestamped events. Counts observed across offline day boundaries cannot be dated precisely. Firmware write commands require on-device verification.
 
 Independent project. Not affiliated with Lost Vape.
+
+## Website
+
+The static landing page is in [`docs/`](docs/) and can be published with GitHub Pages (branch `main`, folder `/docs`). Setup, images, and release automation: [docs/README.md](docs/README.md).

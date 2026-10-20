@@ -1,0 +1,56 @@
+name: Centaurix Website Checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'tools/render_site_assets.py'
+      - '.github/workflows/website-check.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'tools/render_site_assets.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax
+        run: node --check docs/app.js
+      - name: Verify all bundled assets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from urllib.parse import urlparse
+          root=Path('docs')
+          class References(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.paths=[]
+              def handle_starttag(self,tag,attrs):
+                  attrs=dict(attrs)
+                  for key in ('href','src'):
+                      value=attrs.get(key,'')
+                      if value.startswith('./'):
+                          self.paths.append(value.split('?',1)[0])
+                  for candidate in attrs.get('srcset','').split(','):
+                      value=candidate.strip().split(' ')[0]
+                      if value.startswith('./'):
+                          self.paths.append(value)
+          parser=References()
+          parser.feed((root/'index.html').read_text(encoding='utf-8'))
+          missing=[ref for ref in parser.paths if not (root/ref[2:]).is_file()]
+          assert not missing, 'Missing assets: '+', '.join(missing)
+          assert (root/'.nojekyll').is_file()
+          print(f'PASS: {len(parser.paths)} checked references')
+          PY
