@@ -27,8 +27,10 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import kotlinx.coroutines.delay
@@ -66,6 +68,7 @@ class MainActivity:ComponentActivity(){
             CentaurixUi.initialize(applicationContext)
             val ble=remember { CentaurixBle(applicationContext) }
             DisposableEffect(ble){onDispose { ble.onClosed() }}
+            LaunchedEffect(ble) { ble.restoreConnection() }
             CentaurixApp(ble)
         }
     }
@@ -76,8 +79,12 @@ class MainActivity:ComponentActivity(){
     CentaurixUi.systemDark=isSystemInDarkTheme()
     val dark=CentaurixUi.dark
     val activity=context as? ComponentActivity
-    val scheme=(if(dark)darkColorScheme() else lightColorScheme()).copy(primary=Gold,onPrimary=if(Gold.luminance()>.48f)Color.Black else Color.White,
-        primaryContainer=Color(0xFF42371F),background=Back,onBackground=TextMain,
+    val baseScheme=if(CentaurixUi.dynamicColors && Build.VERSION.SDK_INT>=31) {
+        if(dark)dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    }else if(dark)darkColorScheme() else lightColorScheme()
+    SideEffect { CentaurixUi.systemAccentColor=baseScheme.primary }
+    val scheme=baseScheme.copy(primary=Gold,onPrimary=if(Gold.luminance()>.48f)Color.Black else Color.White,
+        primaryContainer=Gold.copy(alpha=.25f),background=Back,onBackground=TextMain,
         surface=Card,onSurface=TextMain,surfaceVariant=Raised,onSurfaceVariant=Muted,
         outline=Line,error=Danger)
     SideEffect {
@@ -124,7 +131,7 @@ class MainActivity:ComponentActivity(){
                     verticalAlignment=Alignment.CenterVertically){
                     Box(Modifier.size(49.dp).clip(RoundedCornerShape(16.dp)).background(
                         Brush.linearGradient(listOf(Gold.copy(alpha=.18f),Raised))),contentAlignment=Alignment.Center){
-                        Icon(Icons.Rounded.Bolt,null,tint=Gold,modifier=Modifier.size(28.dp))
+                        Image(painterResource(R.drawable.centaurix_launcher),null,modifier=Modifier.size(40.dp))
                     }
                     Spacer(Modifier.width(13.dp))
                     Column(Modifier.weight(1f)){
@@ -427,7 +434,7 @@ class MainActivity:ComponentActivity(){
         Spacer(Modifier.height(7.dp))
         ModePicker(edit.mode){ mode->
             edit=edit.copy(mode=mode,watts=if(mode in 3..5)edit.watts.coerceAtMost(100) else edit.watts,
-                boost=if(mode==2)edit.boost.coerceIn(1,3) else edit.boost,
+                boost=if(mode==1)edit.boost.coerceIn(1,3) else edit.boost,
                 voltage=if(mode==6 && edit.voltage<0.7)3.7 else edit.voltage)
         }
         Spacer(Modifier.height(14.dp))
@@ -455,8 +462,8 @@ class MainActivity:ComponentActivity(){
             }
             if(edit.mode==6)EditorSlider("Tension",edit.voltage.toFloat(),
                 {edit=edit.copy(voltage=(it*10).roundToInt()/10.0)},.7f..8f,"V")
-            if(edit.mode==2){
-                Text(tr("Réponse Turbo"),color=Muted,fontSize=13.sp)
+            if(edit.mode==1){
+                Text(tr("Réponse Power"),color=Muted,fontSize=13.sp)
                 Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
                     listOf("HARD","NORM","SOFT").forEachIndexed { index,title ->
                         Pill(title,edit.boost==index+1){ edit=edit.copy(boost=index+1) }
@@ -557,32 +564,11 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(14.dp))
     Panel{
         Text(tr("Thèmes de la box"),fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text(tr("Illustration"),fontSize=12.sp,color=Muted)
-        Spacer(Modifier.height(16.dp))
-        val previews=listOf("Aube","Brume","Nébuleuse","Magma","Minuit")
-        var selected by remember(slot){mutableIntStateOf(1)}
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)){
+        Spacer(Modifier.height(14.dp))
+        var selected by remember(slot){mutableIntStateOf(ble.themes[slot]?.variant?.coerceIn(1,5) ?: 1)}
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(9.dp)){
             items((1..5).toList()){id->
-                Column(Modifier.width(115.dp)){
-                    val sprite=ImageBitmap.imageResource(R.drawable.theme_previews)
-                    Box(Modifier.fillMaxWidth().height(156.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .clickable{selected=id}
-                        .border(if(selected==id)2.dp else 1.dp,
-                            if(selected==id)Gold else Line,RoundedCornerShape(18.dp))) {
-                        Canvas(Modifier.fillMaxSize()) {
-                            drawImage(
-                                image=sprite,
-                                srcOffset=IntOffset((id-1)*75,0),
-                                srcSize=IntSize(75,98),
-                                dstSize=IntSize(size.width.toInt().coerceAtLeast(1),
-                                    size.height.toInt().coerceAtLeast(1))
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Text(tr(previews[id-1]),fontSize=12.sp,fontWeight=FontWeight.Medium)
-                }
+                Pill("Thème $id",selected==id){selected=id}
             }
         }
         Spacer(Modifier.height(18.dp))
@@ -617,6 +603,25 @@ class MainActivity:ComponentActivity(){
     }
 }
 
+@Composable private fun SettingsLine(
+    icon:androidx.compose.ui.graphics.vector.ImageVector,
+    title:String,subtitle:String,onClick:()->Unit
+) {
+    Surface(onClick=onClick,color=Raised,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()){
+        Row(Modifier.fillMaxWidth().padding(15.dp),verticalAlignment=Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(RoundedCornerShape(15.dp)).background(Card),
+                contentAlignment=Alignment.Center) {
+                Icon(icon,null,tint=Gold,modifier=Modifier.size(25.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)){
+                Text(tr(title),fontWeight=FontWeight.SemiBold,fontSize=15.sp)
+                Text(tr(subtitle),fontSize=12.sp,color=Muted)
+            }
+            Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
+        }
+    }
+}
 @Composable private fun AppearanceSettings() {
     Panel {
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -625,72 +630,101 @@ class MainActivity:ComponentActivity(){
             Text(tr("Langue"),fontWeight=FontWeight.Bold,fontSize=17.sp)
         }
         Spacer(Modifier.height(13.dp))
-        val languages=listOf(
-            "system" to tr("Automatique"),
-            "fr" to "Français", "en" to "English", "de" to "Deutsch",
-            "ru" to "Русский", "pl" to "Polski"
-        )
+        val languages=listOf("system" to tr("Automatique"),"fr" to "Français",
+            "en" to "English","de" to "Deutsch","ru" to "Русский","pl" to "Polski")
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            items(languages){(code,label)->
-                Pill(label,CentaurixUi.language==code){CentaurixUi.chooseLanguage(code)}
-            }
+            items(languages){(code,label)->Pill(label,CentaurixUi.language==code){
+                CentaurixUi.chooseLanguage(code)
+            }}
         }
     }
     Spacer(Modifier.height(14.dp))
     Panel {
-        Row(verticalAlignment=Alignment.CenterVertically) {
-            Icon(Icons.Rounded.ColorLens,null,tint=Gold)
-            Spacer(Modifier.width(11.dp))
-            Text(tr("Apparence"),fontWeight=FontWeight.Bold,fontSize=17.sp)
-        }
-        Spacer(Modifier.height(13.dp))
-        val modes=listOf(
-            "system" to tr("Système"),
-            "dark" to tr("Sombre"),
-            "light" to tr("Clair"),
-            "amoled" to "AMOLED"
-        )
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            items(modes){(code,label)->
-                Pill(label,CentaurixUi.theme==code){CentaurixUi.chooseTheme(code)}
-            }
-        }
-        Spacer(Modifier.height(22.dp))
-        Text(tr("Couleur d'accent"),color=Muted,fontSize=13.sp)
-        Spacer(Modifier.height(12.dp))
-        val accents=listOf(
-            "gold" to Color(0xFFD8B65A),
-            "blue" to Color(0xFF5796E5),
-            "purple" to Color(0xFFAE8CE8),
-            "teal" to Color(0xFF51B5B7),
-            "coral" to Color(0xFFE68C76),
-            "green" to Color(0xFF7BC9A2)
-        )
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            accents.forEach { (id,color)->
-                Box(Modifier.size(39.dp)
-                    .border(if(CentaurixUi.accent==id)2.dp else 1.dp,
-                        if(CentaurixUi.accent==id)TextMain else Line,CircleShape)
-                    .padding(5.dp).clip(CircleShape).background(color)
-                    .clickable { CentaurixUi.chooseAccent(id) },
-                    contentAlignment=Alignment.Center) {
-                    if(CentaurixUi.accent==id)Icon(Icons.Rounded.Check,null,
-                        tint=if(color.luminance()>.5f)Color.Black else Color.White,
-                        modifier=Modifier.size(17.dp))
-                }
-            }
-        }
+        Text(tr("Apparence"),fontWeight=FontWeight.Bold,fontSize=21.sp)
         Spacer(Modifier.height(15.dp))
-        var hex by remember { mutableStateOf(CentaurixUi.customHex) }
-        var invalid by remember { mutableStateOf(false) }
-        OutlinedTextField(value=hex,onValueChange={hex=it;invalid=false},
-            label={Text("HEX")},isError=invalid,singleLine=true,
-            modifier=Modifier.fillMaxWidth(),
-            trailingIcon={
-                IconButton(onClick={ invalid=!CentaurixUi.setCustomHex(hex) }){
-                    Icon(Icons.Rounded.Check,null,tint=Gold)
-                }
-            })
+        var open by remember { mutableStateOf("") }
+        val themes=listOf("system" to tr("Système"),"dark" to tr("Sombre"),
+            "light" to tr("Clair"),"amoled" to "AMOLED")
+        val surfaces=listOf("subtle" to tr("Teinte légère"),
+            "normal" to tr("Normale"),"strong" to tr("Prononcée"))
+        val accents=listOf(
+            Triple("gold","Or",Color(0xFFD8B65A)),
+            Triple("pistachio",tr("Pistache"),Color(0xFFA6B987)),
+            Triple("blue","Bleu",Color(0xFF5796E5)),
+            Triple("purple","Violet",Color(0xFFAE8CE8)),
+            Triple("teal","Turquoise",Color(0xFF51B5B7)),
+            Triple("coral","Corail",Color(0xFFE68C76)),
+            Triple("green","Vert",Color(0xFF7BC9A2)),
+            Triple("custom","HEX",Gold)
+        )
+        SettingsLine(Icons.Rounded.DarkMode,"Thème de l'application",
+            themes.firstOrNull{it.first==CentaurixUi.theme}?.second ?: tr("Système")){open="theme"}
+        Spacer(Modifier.height(10.dp))
+        SettingsLine(Icons.Rounded.Layers,"Intensité des surfaces",
+            surfaces.firstOrNull{it.first==CentaurixUi.surfaceIntensity}?.second ?: tr("Teinte légère")){open="surface"}
+        Spacer(Modifier.height(10.dp))
+        SettingsLine(Icons.Rounded.ColorLens,"Couleur d'accent",
+            if(CentaurixUi.dynamicColors)"Material You" else accents.firstOrNull{it.first==CentaurixUi.accent}?.second ?: "Or"){open="accent"}
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Rounded.AutoAwesome,null,tint=Gold,modifier=Modifier.size(28.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)){
+                Text(tr("Material You dynamique"),fontWeight=FontWeight.SemiBold)
+                Text(tr("Couleurs du système"),fontSize=12.sp,color=Muted)
+            }
+            Switch(checked=CentaurixUi.dynamicColors,
+                onCheckedChange={CentaurixUi.chooseDynamicColors(it)},
+                enabled=Build.VERSION.SDK_INT>=31)
+        }
+        if(open.isNotBlank()) {
+            var hex by remember(open){ mutableStateOf(CentaurixUi.customHex) }
+            var invalid by remember(open){mutableStateOf(false)}
+            val title=when(open){
+                "theme"->"Thème de l'application"
+                "surface"->"Intensité des surfaces"
+                else->"Couleur d'accent"
+            }
+            AlertDialog(onDismissRequest={open=""},title={Text(tr(title))},
+                text={
+                    Column(Modifier.heightIn(max=440.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                        when(open){
+                            "theme"->themes.forEach{(key,label)->
+                                Pill(label,CentaurixUi.theme==key){
+                                    CentaurixUi.chooseTheme(key);open=""
+                                }
+                            }
+                            "surface"->surfaces.forEach{(key,label)->
+                                Pill(label,CentaurixUi.surfaceIntensity==key){
+                                    CentaurixUi.chooseSurfaceIntensity(key);open=""
+                                }
+                            }
+                            else->{
+                                accents.forEach{(key,label,color)->
+                                    Surface(onClick={if(key=="custom"){} else {
+                                        CentaurixUi.chooseAccent(key);open=""
+                                    }},shape=RoundedCornerShape(12.dp),
+                                        color=if(CentaurixUi.accent==key)Gold.copy(alpha=.15f) else Raised) {
+                                        Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){
+                                            Box(Modifier.size(20.dp).clip(CircleShape).background(color))
+                                            Spacer(Modifier.width(11.dp))
+                                            Text(label,modifier=Modifier.weight(1f))
+                                            if(CentaurixUi.accent==key)Icon(Icons.Rounded.Check,null,tint=Gold)
+                                        }
+                                    }
+                                }
+                                OutlinedTextField(value=hex,onValueChange={hex=it;invalid=false},
+                                    isError=invalid,label={Text("HEX #RRGGBB")},singleLine=true)
+                                TextButton(onClick={
+                                    invalid=!CentaurixUi.setCustomHex(hex)
+                                    if(!invalid)open=""
+                                }){Text(tr("Confirmer"))}
+                            }
+                        }
+                    }
+                },confirmButton={TextButton(onClick={open=""}){Text(tr("Annuler"))}})
+        }
     }
 }
 
