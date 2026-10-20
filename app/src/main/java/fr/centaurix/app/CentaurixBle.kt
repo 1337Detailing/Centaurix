@@ -48,6 +48,47 @@ class CentaurixBle(private val context:Context) {
     private val stream=Bt200Stream()
     private val txQueue=ArrayDeque<ByteArray>()
     private var writeBusy=false
+    private var currentWriteType=BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+    private var writeEpoch=0
+    private var requestedProfile:Bt200Protocol.Profile?=null
+    private var confirmedWriteAck=false
+    private val puffStore=PuffHistoryStore(context)
+    private var puffLedger=puffStore.load(prefs.getString("device","") ?: "")
+    val puffDays=mutableStateListOf<PuffLedger.Day>()
+    var todayPuffs by mutableLongStateOf(0L); private set
+    var missingDayPuffs by mutableLongStateOf(0L); private set
+    var devicePuffCounter by mutableLongStateOf(0L); private set
+    var trackingSince by mutableStateOf(""); private set
+    private var savedPuffs=Long.MIN_VALUE
+    private var savedDay=""
+    init { refreshPuffScreen() }
+    private fun refreshPuffScreen() {
+        puffDays.clear();puffDays.addAll(puffLedger.history())
+        val today=puffStore.date()
+        todayPuffs=puffLedger.forDay(today).puffs
+        missingDayPuffs=puffLedger.unassignedPuffs
+        trackingSince=puffLedger.history().firstOrNull()?.date ?: ""
+    }
+    private fun recordPuffSnapshot(v:Bt200Protocol.Status){
+        val time=System.currentTimeMillis()
+        val day=puffStore.date(time)
+        val result=puffLedger.accept(day,v.puffs,v.useTime,time)
+        devicePuffCounter=v.puffs
+        if(result.reset)log("Compteur bouffées réinitialisé par la box : nouvelle référence.")
+        if(savedPuffs!=v.puffs || savedDay!=day || result.reset) {
+            puffStore.store(lastSeenId,puffLedger)
+            savedPuffs=v.puffs;savedDay=day
+        }
+        refreshPuffScreen()
+    }
+    fun clearPuffTracking() {
+        puffLedger.clear()
+        puffStore.store(lastSeenId,puffLedger)
+        savedPuffs=Long.MIN_VALUE;savedDay=""
+        refreshPuffScreen()
+        say("Suivi local des bouffées effacé")
+    }
+
     private var scanVersion=0
     private var notificationSetup=false
     private var pollActive=false
@@ -56,7 +97,7 @@ class CentaurixBle(private val context:Context) {
     private var chunkIndex=0
     private var uploadDeadline=0L
     private var uploadSession=0
-    private var lastSeenId=""
+    private var lastSeenId=prefs.getString("device","") ?: ""
     private var lastPoll=0L
     private val MAX_LOGS=280
     private var lastHistoryTime=0L
@@ -142,6 +183,10 @@ class CentaurixBle(private val context:Context) {
             ui{connection="Connexion…";deviceName=d.name;strength=d.rssi}
             gatt=adapter.getRemoteDevice(d.address).connectGatt(context,false,gattCallback,BluetoothDevice.TRANSPORT_LE)
             lastSeenId=d.address
+            puffLedger=puffStore.load(lastSeenId)
+            savedPuffs=Long.MIN_VALUE
+            savedDay=""
+            ui { refreshPuffScreen() }
             prefs.edit().putString("device",lastSeenId).apply()
             say("Connexion à ${d.name}")
         }catch(e:Exception){say("Connexion impossible : "+e.message)}
@@ -159,7 +204,8 @@ class CentaurixBle(private val context:Context) {
         uploadSession++
         cancelUploadState()
         notificationSetup=false
-        tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false
+        tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false;writeEpoch++
+        requestedProfile=null;confirmedWriteAck=false
         val old=gatt; gatt=null
         try{old?.disconnect();old?.close()}catch(_:Exception){}
         ui{connected=false;connection="Déconnectée";busy=false;pendingAction=""}
@@ -230,9 +276,11 @@ class CentaurixBle(private val context:Context) {
         }
         override fun onCharacteristicWrite(g:BluetoothGatt,ch:BluetoothGattCharacteristic,stat:Int){
             if(g!==gatt)return
+            if(currentWriteType==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) return
             if(stat!=0) say("Échec écriture BLE : $stat")
+            writeEpoch++
             synchronized(txQueue){writeBusy=false}
-            main.postDelayed({drainQueue()},60)
+            main.postDelayed({drainQueue()},90)
         }
         override fun onCharacteristicChanged(g:BluetoothGatt,ch:BluetoothGattCharacteristic,value:ByteArray){
             if(g===gatt)received(value)
@@ -265,9 +313,13 @@ class CentaurixBle(private val context:Context) {
         }
         try{
             val properties=c.properties
-            val type=if(properties and BluetoothGattCharacteristic.PROPERTY_WRITE !=0)
-                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            // Centaurus 1.0.9 uses writeNoResponse on Android. Prefer it when FFA1 supports both.
+            val type=if(properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE!=0)
+                BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            currentWriteType=type
+            val epoch=++writeEpoch
+            if(Bt200Protocol.u8(value,2) in listOf(2,3,6,1)) ui { log("TX 0x"+Bt200Protocol.u8(value,2).toString(16).uppercase()+" / "+value.size+" octets") }
             val ok=if(Build.VERSION.SDK_INT>=33)
                 g.writeCharacteristic(c,value,type)==BluetoothStatusCodes.SUCCESS
             else{
@@ -278,7 +330,19 @@ class CentaurixBle(private val context:Context) {
                 @Suppress("DEPRECATION")
                 g.writeCharacteristic(c)
             }
-            if(!ok){synchronized(txQueue){writeBusy=false};say("Écriture refusée par Android");main.postDelayed({drainQueue()},150)}
+            if(!ok){
+                synchronized(txQueue){writeBusy=false}
+                say("Écriture refusée par Android (0x"+Bt200Protocol.u8(value,2).toString(16)+")")
+                main.postDelayed({drainQueue()},150)
+            } else if(type==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
+                // WRITE_NO_RESPONSE is not guaranteed to invoke onCharacteristicWrite.
+                main.postDelayed({
+                    if(epoch==writeEpoch){
+                        synchronized(txQueue){writeBusy=false}
+                        drainQueue()
+                    }
+                },110)
+            }
         }catch(e:Exception){
             synchronized(txQueue){writeBusy=false}
             say("Écriture Bluetooth : "+e.message)
@@ -293,12 +357,13 @@ class CentaurixBle(private val context:Context) {
                 when(incoming) {
                     is Bt200Protocol.Incoming.State -> {
                         status=incoming.value; connected=true
+                        recordPuffSnapshot(incoming.value)
                         if(System.currentTimeMillis()-lastHistoryTime>60000L ||
                             incoming.value.puffs!=lastHistoryCount) saveHistory(incoming.value)
                     }
                     is Bt200Protocol.Incoming.ProfileValue -> {
                         profiles[incoming.value.slot]=incoming.value
-                        if(pendingAction=="save") { pendingAction="";busy=false;notice="Profil synchronisé avec la box" }
+                        verifyProfileReadback(incoming.value)
                     }
                     is Bt200Protocol.Incoming.ThemeValue -> themes[incoming.value.slot]=incoming.value
                     is Bt200Protocol.Incoming.Ack -> receiveAck(incoming)
@@ -308,14 +373,43 @@ class CentaurixBle(private val context:Context) {
             }
         }
     }
+    private fun verifyProfileReadback(actual:Bt200Protocol.Profile) {
+        val requested=requestedProfile ?: return
+        if(!confirmedWriteAck || actual.slot!=requested.slot) return
+        val ok=actual.mode==requested.mode && if(requested.mode==7){
+            actual.curve==requested.curve
+        } else {
+            actual.watts==requested.watts
+        }
+        if(ok) {
+            notice=if(requested.mode==7)"Courbe VPC enregistrée et relue ✅"
+                else "Puissance ${actual.watts} W confirmée par la box ✅"
+            log(notice)
+            pendingAction="";busy=false;requestedProfile=null;confirmedWriteAck=false
+            enqueue(Bt200Protocol.readStatus())
+        } else {
+            log("Relecture différente pour profil ${actual.slot}: envoyé mode=${requested.mode}, W=${requested.watts}; lu mode=${actual.mode}, W=${actual.watts}")
+            // Wait for delayed apply/read before determining failure.
+        }
+    }
     private fun receiveAck(ack:Bt200Protocol.Incoming.Ack){
         when(ack.opcode){
             0x82 -> {
-                notice=if(ack.success)"Réglages acceptés par la BT200" else "Réglages refusés (code ${ack.code})"
-                log(notice)
-                busy=false
-                pendingAction=""
-                if(ack.success) (1..3).forEach {enqueue(Bt200Protocol.readProfile(it))}
+                if(pendingAction!="save" || requestedProfile==null) {
+                    log("Accusé 0x82 inattendu (code=${ack.code})")
+                } else if(!ack.success) {
+                    notice="La BT200 a refusé le réglage (code ${ack.code})"
+                    log(notice);busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false
+                } else {
+                    confirmedWriteAck=true
+                    val wanted=requestedProfile!!
+                    notice="Réglage accepté. Vérification sur la box…"
+                    log("ACK 0x82 positif • lecture de contrôle du profil ${wanted.slot}")
+                    // Selecting the requested mode mirrors Centaurus official command 0x06.
+                    enqueue(Bt200Protocol.readMode(wanted.slot,wanted.mode))
+                    main.postDelayed({enqueue(Bt200Protocol.readProfile(wanted.slot));enqueue(Bt200Protocol.readStatus())},500)
+                    main.postDelayed({if(pendingAction=="save")enqueue(Bt200Protocol.readProfile(wanted.slot))},1700)
+                }
             }
             0x84 -> {
                 notice=if(ack.success)"Profil réinitialisé" else "Réinitialisation refusée"
@@ -387,9 +481,20 @@ class CentaurixBle(private val context:Context) {
         if(!connected || transferOngoing || busy)return
         try {
             val frame=if(profile.mode==7)Bt200Protocol.saveCurve(profile) else Bt200Protocol.saveProfile(profile)
-            ui {busy=true;pendingAction="save";notice="Envoi du profil…"}
+            requestedProfile=profile
+            confirmedWriteAck=false
+            busy=true;pendingAction="save";notice="Envoi du profil • attente de confirmation"
+            // The command is prepared with the exact 0A00 / 1200 payload structure of Centaurus.
             enqueue(frame)
-            main.postDelayed({if(busy && pendingAction=="save"){busy=false;pendingAction="";notice="Pas d'accusé de réception : actualise la box"}},6000)
+            main.postDelayed({
+                if(busy && pendingAction=="save") {
+                    val hadAck=confirmedWriteAck
+                    busy=false;pendingAction="";requestedProfile=null;confirmedWriteAck=false
+                    notice=if(hadAck)"Échec de vérification : les valeurs relues diffèrent (voir journal)"
+                        else "Aucun accusé de sauvegarde reçu (voir journal)"
+                    log(notice)
+                }
+            },8000)
         }catch(e:Exception){say("Réglage invalide : "+e.message)}
     }
     fun resetProfile(slot:Int) {
