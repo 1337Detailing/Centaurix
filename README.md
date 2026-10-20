@@ -19,7 +19,7 @@ JDK 17 and Android SDK 35 required.
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-Download debug builds from GitHub Actions **Artifacts**.
+Once the two permanent signing secrets are configured, download signed release APKs from GitHub Actions **Artifacts** or GitHub Releases. See [SIGNING.md](SIGNING.md) for setup and key backup instructions.
 
 ## Limitations
 

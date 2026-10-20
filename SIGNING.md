@@ -28,7 +28,7 @@ base64 -w 0 centaurix-release.p12 > signing-base64.txt
 On macOS:
 
 ```sh
-base64 < centaurix-release.p12 | tr -d '\\n' > signing-base64.txt
+base64 < centaurix-release.p12 | tr -d '\n' > signing-base64.txt
 ```
 
 On Windows PowerShell:
