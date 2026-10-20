@@ -495,7 +495,7 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(14.dp))
     Panel{
         Text("Collections officielles",fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text("Cinq variantes intégrées reconnues par l'application d'origine.",
+        Text("Cinq variantes intégrées • aperçus illustratifs, pouvant différer des vrais visuels.",
             fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(16.dp))
         val previews=listOf("Aube","Brume","Nébuleuse","Magma","Minuit")
@@ -620,7 +620,7 @@ class MainActivity:ComponentActivity(){
             dismissButton={TextButton(onClick={confirm=false}){Text("Annuler")}})
     }
     Spacer(Modifier.height(15.dp))
-    Text("CENTAURIX · 1.0 BETA\nInspiré du langage visuel Cloudix\nProjet indépendant, non affilié à Lost Vape",
+    Text("CENTAURIX · 1.0 BETA 2\nInspiré du langage visuel Cloudix\nProjet indépendant, non affilié à Lost Vape",
         textAlign=TextAlign.Center,color=Muted,fontSize=11.sp,lineHeight=18.sp,
         modifier=Modifier.fillMaxWidth())
 }
