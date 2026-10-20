@@ -1,14 +1,24 @@
-# Centaurix 0.4.0
+# Centaurix v0.5.0
 
-Application indépendante Android pour vérifier la communication Bluetooth avec la Lost Vape Centaurus BT200. Non affiliée au fabricant.
+App Android de diagnostic BLE pour la Lost Vape Centaurus BT200. Non affiliée au constructeur.
 
-## Diagnostic
-- Scanner BLE sans filtre, haute sensibilité, 20 secondes ; affiche chaque appareil détecté et son RSSI.
-- Permissions Appareils à proximité et Localisation précise, rappel d'activer Localisation dans Android.
-- Appareils Bluetooth déjà associés.
-- Connexion GATT, service FFA0, activation des notifications, requête officielle d'état `AA550100007C14` et contrôle CRC.
-- Partage manuel du journal ; aucune transmission automatique.
+## Communication prouvée
 
-**Avant le scan** : BT200 > Menu > Bluetooth > ON > **presser le bouton central pour valider**. Activer Bluetooth + Localisation sur téléphone ; fermer l'application officielle Centaurus.
+Un test sur une vraie BT200 a confirmé la détection Bluetooth, la connexion GATT, le service FFA0, les notifications et la réponse d'état à `AA550100007C14`.
 
-Ne modifie ni puissance, ni chauffe, ni profils, ni firmware. Projet de test : connexion matérielle non encore validée.
+La v0.4 rejetait cette réponse car elle attendait le CRC16/MODBUS dans l'ordre des octets de la requête (LE). La réponse réelle utilise **l'ordre inverse BE** : CRC calculé `0x9480`, octets reçus `94 80`. La v0.5 accepte les deux ordres, sans désactiver la vérification.
+
+Affichage en lecture seule : pourcentages des deux accus, profil actif, mode, watts (Power/Turbo), compteur bouffées et temps rapporté par le firmware. Journaux de réponses multiparties et bouton de partage.
+
+## Test
+
+BT200 : Menu > Bluetooth > ON et confirmer avec le bouton central. Fermer l'application officielle.
+Android : activer Bluetooth + Localisation, autoriser les permissions, scanner et sélectionner BT200.
+
+Aucune commande de réglage, chauffe ou firmware envoyée : seule la requête de lecture d'état est utilisée.
+
+## Vérifications
+
+`javac -d /tmp/centaurix-protocol-test app/src/main/java/fr/centaurix/app/Bt200FrameCodec.java tests/ProtocolTest.java && java -cp /tmp/centaurix-protocol-test fr.centaurix.app.ProtocolTest`
+
+Le workflow GitHub Actions compile l'APK et lance les tests sur le vecteur de réponse matériel.

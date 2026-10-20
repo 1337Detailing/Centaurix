@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final LinkedHashMap<String, BluetoothDevice> devices = new LinkedHashMap<>();
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    private final StringBuilder report = new StringBuilder("Centaurix BT200 BLE Diagnostic 0.4.0\n");
+    private final StringBuilder report = new StringBuilder("Centaurix BT200 BLE Diagnostic 0.5.0\n");
     private BluetoothLeScanner scanner;
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic writeChar;
@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
         TextView title = text("CENTAURIX / TEST", 27, 0xffe5b85b);
         title.setTypeface(null, 1);
         root.addView(title);
-        root.addView(text("BT200 • Diagnostic Bluetooth • v0.4.0 • lecture seule", 13, 0xffcccccc));
+        root.addView(text("BT200 • Diagnostic Bluetooth • v0.5.0 • lecture seule", 13, 0xffcccccc));
         state = text("Prêt à rechercher la BT200", 18, 0xffe5b85b);
         state.setPadding(0, dp(20), 0, dp(12));
         root.addView(state);
@@ -365,27 +365,26 @@ public class MainActivity extends Activity {
             if (length > 4096) { pos++; continue; }
             int end = pos + length + 7;
             if (end > all.length) break;
-            int expected = (all[end - 2] & 255) | ((all[end - 1] & 255) << 8);
-            int real = crc16(all, pos, end - 2);
-            if (real != expected) { note("CRC invalide " + expected + " != " + real); pos++; continue; }
+            byte[] frame = Arrays.copyOfRange(all, pos, end);
+            String crcOrder = Bt200FrameCodec.crcOrder(frame);
+            if (crcOrder == null) {
+                int computed = Bt200FrameCodec.crc16(all, pos, end - 2);
+                note("CRC invalide : calcul=" + String.format(Locale.US, "%04X", computed) + " reçu=" + hex(Arrays.copyOfRange(all, end-2, end)));
+                pos++; continue;
+            }
             receivedValid++;
-            int opcode = all[pos + 2] & 255;
-            setState("COMMUNICATION BT200 CONFIRMÉE ✅ (opcode 0x" + Integer.toHexString(opcode).toUpperCase(Locale.ROOT) + ")", true);
-            note("RÉPONSE VALIDE AA55+CRC trame #" + receivedValid + " " + hex(Arrays.copyOfRange(all, pos, end)));
+            int opcode = frame[2] & 255;
+            String summary = Bt200FrameCodec.describe(frame);
+            setState("COMMUNICATION BT200 CONFIRMÉE ✅ (réponse 0x" + Integer.toHexString(opcode).toUpperCase(Locale.ROOT) + ")", true);
+            note("CRC valide (" + crcOrder + ") • réponse #" + receivedValid);
+            note("RÉPONSE : " + hex(frame) + "\n" + summary);
+            main.post(() -> details.setText("✅ Lecture de la BT200 confirmée\n\n" + summary + "\n\nCRC : " + crcOrder + " • Requête de lecture uniquement."));
             pos = end;
         }
         if (pos > 0) {
             buffer.reset();
             buffer.write(all, pos, all.length - pos);
         }
-    }
-    private int crc16(byte[] data, int start, int end) {
-        int crc = 0xffff;
-        for (int i = start; i < end; i++) {
-            crc ^= data[i] & 255;
-            for (int bit=0; bit<8; bit++) crc = (crc & 1) != 0 ? (crc >>> 1) ^ 0xa001 : (crc >>> 1);
-        }
-        return crc & 65535;
     }
     private String hex(byte[] data) {
         StringBuilder sb = new StringBuilder();
