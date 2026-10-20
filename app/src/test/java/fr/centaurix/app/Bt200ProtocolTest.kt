@@ -21,6 +21,7 @@ class Bt200ProtocolTest {
             voltage=0.0,boost=1))
         assertEquals(0x02,Bt200Protocol.u8(turbo,2))
         assertEquals(10,Bt200Protocol.u16(turbo,3))
+        assertEquals(0,Bt200Protocol.u8(turbo,turbo.size-3)) // No response profile in Turbo
         val curve=Bt200Protocol.saveCurve(Bt200Protocol.Profile(1,7,
             curve=listOf(50,55,60,65,70,75,80,85)))
         assertEquals(18,Bt200Protocol.u16(curve,3))
@@ -69,6 +70,7 @@ class Bt200ProtocolTest {
         assertEquals(p.mode,restored.mode)
         assertEquals(p.watts,restored.watts)
         assertEquals(p.coil,restored.coil,0.001)
+        assertEquals(2,restored.boost) // Response level belongs to Power
     }
     @Test fun vpcRoundtrip() {
         val p=Bt200Protocol.Profile(slot=3,mode=7,curve=listOf(5,20,40,60,70,100,90,5))
