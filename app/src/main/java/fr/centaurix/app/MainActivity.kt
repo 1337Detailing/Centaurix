@@ -639,7 +639,7 @@ class MainActivity:ComponentActivity(){
         )
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             items(languages){(code,label)->
-                Pill(label,CentaurixUi.language==code){CentaurixUi.setLanguage(code)}
+                Pill(label,CentaurixUi.language==code){CentaurixUi.chooseLanguage(code)}
             }
         }
     }
@@ -659,7 +659,7 @@ class MainActivity:ComponentActivity(){
         )
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             items(modes){(code,label)->
-                Pill(label,CentaurixUi.theme==code){CentaurixUi.setTheme(code)}
+                Pill(label,CentaurixUi.theme==code){CentaurixUi.chooseTheme(code)}
             }
         }
         Spacer(Modifier.height(22.dp))
@@ -679,7 +679,7 @@ class MainActivity:ComponentActivity(){
                     .border(if(CentaurixUi.accent==id)2.dp else 1.dp,
                         if(CentaurixUi.accent==id)TextMain else Line,CircleShape)
                     .padding(5.dp).clip(CircleShape).background(color)
-                    .clickable { CentaurixUi.setAccent(id) },
+                    .clickable { CentaurixUi.chooseAccent(id) },
                     contentAlignment=Alignment.Center) {
                     if(CentaurixUi.accent==id)Icon(Icons.Rounded.Check,null,
                         tint=if(color.luminance()>.5f)Color.Black else Color.White,

@@ -33,15 +33,15 @@ object CentaurixUi {
         accent=prefs?.getString("accent","gold") ?: "gold"
         customHex=prefs?.getString("customHex","#D8B65A") ?: "#D8B65A"
     }
-    fun setLanguage(value:String) {
+    fun chooseLanguage(value:String) {
         require(value in listOf("system","fr","en","de","ru","pl"))
         language=value; prefs?.edit()?.putString("language",value)?.apply()
     }
-    fun setTheme(value:String) {
+    fun chooseTheme(value:String) {
         require(value in listOf("system","dark","light","amoled"))
         theme=value; prefs?.edit()?.putString("theme",value)?.apply()
     }
-    fun setAccent(value:String) {
+    fun chooseAccent(value:String) {
         require(value in listOf("gold","blue","purple","teal","coral","green","custom"))
         accent=value; prefs?.edit()?.putString("accent",value)?.apply()
     }
@@ -50,7 +50,7 @@ object CentaurixUi {
         if(!Regex("^#[0-9A-F]{6}$").matches(h))return false
         customHex=h
         prefs?.edit()?.putString("customHex",h)?.apply()
-        setAccent("custom")
+        chooseAccent("custom")
         return true
     }
     private fun code()=if(language=="system")Locale.getDefault().language else language
