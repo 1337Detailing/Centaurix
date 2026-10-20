@@ -116,7 +116,6 @@ object Bt200Protocol {
         require(profile.voltage in 0.0..8.0)
         require(profile.boost in 0..3)
         if (profile.mode==6) require(profile.voltage in 0.7..8.0)
-        if (profile.mode==2) require(profile.boost in 1..3)
         if (profile.mode in 3..5) require(profile.watts<=100)
         if (profile.mode in 3..5) require(if (profile.fahrenheit) profile.temperature in 200..600 else profile.temperature in 100..315)
         val rawTemp=(profile.temperature and 0x7fff) or (if(profile.fahrenheit) 0x8000 else 0)
@@ -126,7 +125,8 @@ object Bt200Protocol {
         buf.write(le16(profile.watts))
         buf.write(le16(rawTemp))
         buf.write((profile.voltage*10).roundToInt())
-        buf.write(profile.boost)
+        // HARD/NORM/SOFT is a Power-mode setting, not a Turbo setting.
+        buf.write(if (profile.mode==1) profile.boost else 0)
         return packet(0x02,buf.toByteArray())
     }
     fun saveCurve(profile:Profile):ByteArray {

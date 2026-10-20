@@ -21,8 +21,11 @@ android {
         // Always increase versionCode for updates. Never reset it.
         // In CI, use a monotonically increasing number so newer APKs replace older builds.
         versionCode = providers.environmentVariable("CENTAURIX_CI_VERSION_CODE")
-            .orNull?.toIntOrNull() ?: 106
-        versionName = "1.0.0-beta6"
+            .orNull?.toIntOrNull() ?: 107
+        versionName = "1.0.0-beta7"
+        // Releases from the same signing channel are compatible Android updates.
+        val channel = providers.environmentVariable("CENTAURIX_UPDATE_CHANNEL").orNull ?: "none"
+        buildConfigField("String", "UPDATE_CHANNEL", "\"$channel\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -53,7 +56,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.04.01")
