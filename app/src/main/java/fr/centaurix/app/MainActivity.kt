@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlin.math.roundToInt
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -79,6 +80,8 @@ class MainActivity:ComponentActivity(){
     CentaurixUi.systemDark=isSystemInDarkTheme()
     val dark=CentaurixUi.dark
     val activity=context as? ComponentActivity
+    val updater=remember(context){CentaurixUpdater(context.applicationContext)}
+    DisposableEffect(updater){updater.check(silent=true);onDispose {updater.close()}}
     val baseScheme=if(CentaurixUi.dynamicColors && Build.VERSION.SDK_INT>=31) {
         if(dark)dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     }else if(dark)darkColorScheme() else lightColorScheme()
@@ -186,13 +189,14 @@ class MainActivity:ComponentActivity(){
                             2 -> VpcPage(ble,onConnect={chooseDevice()})
                             3 -> PuffsPage(ble,currentDate)
                             4 -> ThemesPage(ble,onPickImage={imagePicker.launch("image/*")},onConnect={chooseDevice()})
-                            else -> MorePage(ble,onConnect={chooseDevice()})
+                            else -> MorePage(ble,updater=updater,onConnect={chooseDevice()})
                         }
                         Spacer(Modifier.height(20.dp))
                     }
                 }
             }
         }
+        if(updater.update!=null && !updater.dismissed) UpdateOverlay(updater)
         if(deviceChooser) DeviceDialog(ble,onClose={deviceChooser=false},onSelect={
             ble.connectDevice(it);deviceChooser=false
         })
@@ -728,10 +732,55 @@ class MainActivity:ComponentActivity(){
     }
 }
 
-@Composable private fun MorePage(ble:CentaurixBle,onConnect:()->Unit){
+@Composable private fun UpdateOverlay(updater:CentaurixUpdater) {
+    val available=updater.update ?: return
+    Dialog(onDismissRequest={updater.dismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)){
+        Surface(Modifier.fillMaxSize(),color=Back) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+                .padding(28.dp),verticalArrangement=Arrangement.Center,
+                horizontalAlignment=Alignment.CenterHorizontally){
+                Icon(Icons.Rounded.SystemUpdateAlt,null,tint=Gold,
+                    modifier=Modifier.size(80.dp))
+                Spacer(Modifier.height(22.dp))
+                Text("NOUVELLE MISE À JOUR",color=Gold,letterSpacing=2.sp,
+                    fontSize=13.sp,fontWeight=FontWeight.Bold)
+                Spacer(Modifier.height(13.dp))
+                Text("Centaurix ${available.versionName}",color=TextMain,
+                    fontSize=27.sp,fontWeight=FontWeight.Bold,textAlign=TextAlign.Center)
+                Spacer(Modifier.height(10.dp))
+                Text("Une nouvelle version est disponible. APK fourni par GitHub Actions et vérifié avant installation.",
+                    textAlign=TextAlign.Center,color=Muted,fontSize=14.sp)
+                Spacer(Modifier.height(20.dp))
+                if(updater.message.isNotBlank()){
+                    Text(updater.message,color=Muted,fontSize=12.sp,textAlign=TextAlign.Center)
+                    Spacer(Modifier.height(12.dp))
+                }
+                GoldButton("Télécharger et installer",Icons.Rounded.Download,
+                    enabled=!updater.busy){updater.install()}
+                Spacer(Modifier.height(10.dp))
+                GhostButton("Plus tard",Icons.Rounded.Close){updater.dismiss()}
+            }
+        }
+    }
+}
+
+@Composable private fun MorePage(ble:CentaurixBle,updater:CentaurixUpdater,onConnect:()->Unit){
     val ctx=LocalContext.current
     Label("Réglages","CENTAURIX")
     AppearanceSettings()
+    Spacer(Modifier.height(14.dp))
+    Panel {
+        Text("Mises à jour",fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text("Version ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE}",
+            color=Muted,fontSize=12.sp)
+        if(updater.message.isNotBlank()){
+            Spacer(Modifier.height(9.dp))
+            Text(updater.message,color=Gold,fontSize=12.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+        GhostButton("Rechercher une mise à jour",Icons.Rounded.SystemUpdate,
+            enabled=!updater.busy,onClick={updater.check()})
+    }
     Spacer(Modifier.height(14.dp))
     Panel{
         Row(verticalAlignment=Alignment.CenterVertically){
