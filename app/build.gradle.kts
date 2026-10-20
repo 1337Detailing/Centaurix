@@ -3,17 +3,49 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Use one private PKCS#12 signing key for every distributable Centaurix APK.
+// CI injects the file and its password; neither is stored in the repository.
+val releaseKeyFile = providers.environmentVariable("CENTAURIX_KEYSTORE_FILE").orNull
+val releaseKeyPassword = providers.environmentVariable("CENTAURIX_SIGNING_PASSWORD").orNull
+val hasReleaseSigning = !releaseKeyFile.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "fr.centaurix.app"
     compileSdk = 35
+
     defaultConfig {
         applicationId = "fr.centaurix.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 104
-        versionName = "1.0.0-beta4"
+        // Always increase versionCode for updates. Never reset it.
+        versionCode = 106
+        versionName = "1.0.0-beta6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("centaurixRelease") {
+                storeFile = file(releaseKeyFile!!)
+                storePassword = releaseKeyPassword
+                storeType = "pkcs12"
+                keyAlias = "centaurix"
+                // This keystore uses the same password for the private key.
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("centaurixRelease")
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

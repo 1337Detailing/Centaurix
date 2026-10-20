@@ -1,0 +1,12 @@
+# Private signing material must never enter Git.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*keystore*.base64
+signing-base64.txt
+local.properties
+.gradle/
+**/build/
