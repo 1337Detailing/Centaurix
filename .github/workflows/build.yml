@@ -7,6 +7,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'website/**'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -45,6 +47,7 @@ jobs:
           set -euo pipefail
           if [[ -n "$KEYSTORE_B64" && -n "$KEY_PASSWORD" ]]; then
             echo "permanent=true" >> "$GITHUB_OUTPUT"
+            echo "CENTAURIX_UPDATE_CHANNEL=permanent" >> "$GITHUB_ENV"
           elif [[ -n "$KEYSTORE_B64" || -n "$KEY_PASSWORD" ]]; then
             echo "::error::Both permanent signing secrets must be set together."
             exit 1
@@ -54,6 +57,7 @@ jobs:
               exit 1
             fi
             echo "permanent=false" >> "$GITHUB_OUTPUT"
+            echo "CENTAURIX_UPDATE_CHANNEL=temp" >> "$GITHUB_ENV"
             echo "::notice::Using a temporary, cache-backed test signing identity. This is NOT secure permanent signing."
           fi
 
@@ -168,6 +172,23 @@ jobs:
             cp "$APK" "dist/Centaurix-TEMP.apk"
           fi
           ( cd dist && sha256sum ./*.apk > SHA256SUMS.txt )
+          APK_NAME="$(basename "$(find dist -maxdepth 1 -name '*.apk' -print -quit)")"
+          SHA="$(sha256sum "dist/$APK_NAME" | awk '{print $1}')"
+          if [[ "${{ steps.signing.outputs.permanent }}" == "true" ]]; then
+            CHANNEL="permanent"
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              TAG="$GITHUB_REF_NAME"
+            else
+              TAG="ci-current"
+            fi
+          else
+            CHANNEL="temp"
+            TAG="ci-preview"
+          fi
+          APK_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APK_NAME"
+          jq -n --arg channel "$CHANNEL" --argjson versionCode "$CENTAURIX_CI_VERSION_CODE" \
+            --arg versionName "$VERSION" --arg apkUrl "$APK_URL" --arg sha256 "$SHA" \
+            '{channel:$channel,versionCode:$versionCode,versionName:$versionName,apkUrl:$apkUrl,sha256:$sha256}' > dist/update.json
 
       - name: Upload permanent signed APK artifact
         if: steps.signing.outputs.permanent == 'true'
@@ -199,7 +220,21 @@ jobs:
               --title "Centaurix Temporary Beta (test signature)" \
               --notes "Temporary CI-signed test APK. Not a production signature. Keep the same GitHub cache to update without uninstalling. If its key is lost, updates cannot be signed and publishing stops. Upgrading from earlier differently-signed APKs still requires a one-time reinstall."
           fi
-          gh release upload ci-preview dist/Centaurix-TEMP.apk dist/SHA256SUMS.txt --clobber
+          gh release upload ci-preview dist/Centaurix-TEMP.apk dist/SHA256SUMS.txt dist/update.json --clobber
+
+      - name: Publish public permanent rolling APK
+        if: steps.signing.outputs.permanent == 'true' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view ci-current >/dev/null 2>&1; then
+            gh release create ci-current --target "$GITHUB_SHA" --prerelease \
+              --title "Centaurix Current (signed)" \
+              --notes "Automatically built permanently signed APK. Updates require the same original signing certificate."
+          fi
+          gh release upload ci-current dist/*.apk dist/SHA256SUMS.txt dist/update.json --clobber
 
       - name: Publish permanent signed GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.permanent == 'true'
@@ -210,6 +245,7 @@ jobs:
           files: |
             dist/*.apk
             dist/SHA256SUMS.txt
+            dist/update.json
 
       - name: Remove temporary signing file
         if: always()
