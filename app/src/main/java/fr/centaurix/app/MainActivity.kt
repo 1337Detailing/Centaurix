@@ -27,6 +27,11 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
+import kotlinx.coroutines.delay
+import java.time.LocalDate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,16 +43,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val Gold=Color(0xFFD8B65A)
-private val GoldLight=Color(0xFFF1DCA3)
-private val Back=Color(0xFF0B0C11)
-private val Card=Color(0xFF171920)
-private val Raised=Color(0xFF22242D)
-private val Line=Color(0xFF30313B)
-private val TextMain=Color(0xFFF8F6FC)
-private val Muted=Color(0xFFA9A7B3)
-private val Mint=Color(0xFF80D5A4)
-private val Danger=Color(0xFFF29B91)
+private val Gold get()=CentaurixUi.palette().primary
+private val GoldLight get()=CentaurixUi.palette().primary
+private val Back get()=CentaurixUi.palette().background
+private val Card get()=CentaurixUi.palette().surface
+private val Raised get()=CentaurixUi.palette().raised
+private val Line get()=CentaurixUi.palette().border
+private val TextMain get()=CentaurixUi.palette().text
+private val Muted get()=CentaurixUi.palette().muted
+private val Mint get()=CentaurixUi.palette().success
+private val Danger get()=CentaurixUi.palette().error
+private fun tr(text:String)=CentaurixUi.text(text)
 private val ShapeCard=RoundedCornerShape(24.dp)
 
 class MainActivity:ComponentActivity(){
@@ -56,6 +62,7 @@ class MainActivity:ComponentActivity(){
         window.statusBarColor=android.graphics.Color.rgb(11,12,17)
         window.navigationBarColor=android.graphics.Color.rgb(11,12,17)
         setContent {
+            CentaurixUi.initialize(applicationContext)
             val ble=remember { CentaurixBle(applicationContext) }
             DisposableEffect(ble){onDispose { ble.onClosed() }}
             CentaurixApp(ble)
@@ -65,12 +72,33 @@ class MainActivity:ComponentActivity(){
 
 @Composable fun CentaurixApp(ble:CentaurixBle){
     val context=LocalContext.current
-    val scheme=darkColorScheme(primary=Gold,onPrimary=Color(0xFF1B160C),
+    CentaurixUi.systemDark=isSystemInDarkTheme()
+    val dark=CentaurixUi.dark
+    val activity=context as? ComponentActivity
+    val scheme=(if(dark)darkColorScheme() else lightColorScheme()).copy(primary=Gold,onPrimary=if(dark)Color(0xFF1B160C) else Color.White,
         primaryContainer=Color(0xFF42371F),background=Back,onBackground=TextMain,
         surface=Card,onSurface=TextMain,surfaceVariant=Raised,onSurfaceVariant=Muted,
         outline=Line,error=Danger)
+    SideEffect {
+        activity?.window?.apply {
+            statusBarColor=Back.toArgb()
+            navigationBarColor=Back.toArgb()
+            WindowCompat.getInsetsController(this,decorView).apply {
+                isAppearanceLightStatusBars=!dark
+                isAppearanceLightNavigationBars=!dark
+            }
+        }
+    }
     MaterialTheme(colorScheme=scheme,shapes=Shapes(medium=RoundedCornerShape(18.dp),large=ShapeCard)) {
         var page by remember { mutableIntStateOf(0) }
+        var currentDate by remember { mutableStateOf(LocalDate.now()) }
+        LaunchedEffect(Unit) {
+            while(true) {
+                currentDate=LocalDate.now()
+                ble.refreshDailyStats()
+                delay(15_000)
+            }
+        }
         var deviceChooser by remember{mutableStateOf(false)}
         var settingsPermission by remember { mutableStateOf(false) }
         val permissions=if(Build.VERSION.SDK_INT>=31)
@@ -87,7 +115,7 @@ class MainActivity:ComponentActivity(){
         val imagePicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->
             if(uri!=null)ble.upload(uri)
         }
-        val headerTitles=listOf("Accueil","Profils","VPC","Puffs","Thèmes","Plus")
+        val headerTitles=listOf("Accueil","Profils","VPC","Bouffées","Thèmes","Plus")
         Scaffold(
             containerColor=Back,
             topBar={
@@ -99,15 +127,15 @@ class MainActivity:ComponentActivity(){
                     }
                     Spacer(Modifier.width(13.dp))
                     Column(Modifier.weight(1f)){
-                        Text("CENTAURIX",fontSize=18.sp,fontWeight=FontWeight.ExtraBold,letterSpacing=1.7.sp)
-                        Text(headerTitles[page].uppercase(Locale.FRANCE),color=Muted,fontSize=11.sp,letterSpacing=1.8.sp)
+                        Text(tr("CENTAURIX"),fontSize=18.sp,fontWeight=FontWeight.ExtraBold,letterSpacing=1.7.sp)
+                        Text(tr(headerTitles[page]).uppercase(CentaurixUi.locale()),color=Muted,fontSize=11.sp,letterSpacing=1.8.sp)
                     }
                     Surface(onClick={if(ble.connected)ble.refresh() else chooseDevice()},
                         color=if(ble.connected)Mint.copy(alpha=.12f) else Raised,shape=RoundedCornerShape(16.dp)){
                         Row(Modifier.padding(horizontal=11.dp,vertical=9.dp),verticalAlignment=Alignment.CenterVertically) {
                             Box(Modifier.size(7.dp).clip(CircleShape).background(if(ble.connected)Mint else Muted))
                             Spacer(Modifier.width(7.dp))
-                            Text(if(ble.connected)"LIÉE" else "CONNECTER",
+                            Text(if(ble.connected)tr("Connectée").uppercase(CentaurixUi.locale()) else tr("Connecter").uppercase(CentaurixUi.locale()),
                                 fontSize=11.sp,color=if(ble.connected)Mint else Gold,fontWeight=FontWeight.Bold)
                         }
                     }
@@ -120,14 +148,14 @@ class MainActivity:ComponentActivity(){
                         Triple("Accueil",Icons.Rounded.Home,0),
                         Triple("Profils",Icons.Rounded.Tune,1),
                         Triple("VPC",Icons.Rounded.ShowChart,2),
-                        Triple("Puffs",Icons.Rounded.BarChart,3),
+                        Triple("Bouffées",Icons.Rounded.BarChart,3),
                         Triple("Thèmes",Icons.Rounded.Palette,4),
                         Triple("Plus",Icons.Rounded.MoreHoriz,5)
                     )
                     tabs.forEach{(label,icon,index)->
                         NavigationBarItem(selected=page==index,onClick={page=index},
                             icon={Icon(icon,label,modifier=Modifier.size(20.dp))},
-                            label={Text(label,fontSize=9.sp,maxLines=1)},
+                            label={Text(tr(label),fontSize=9.sp,maxLines=1)},
                             colors=NavigationBarItemDefaults.colors(
                                 selectedIconColor=Gold,selectedTextColor=Gold,
                                 unselectedIconColor=Muted,unselectedTextColor=Muted,
@@ -148,7 +176,7 @@ class MainActivity:ComponentActivity(){
                             0 -> HomePage(ble,onConnect={chooseDevice()},onProfiles={page=1},onThemes={page=4},onPuffs={page=3})
                             1 -> ProfilesPage(ble,onConnect={chooseDevice()})
                             2 -> VpcPage(ble,onConnect={chooseDevice()})
-                            3 -> PuffsPage(ble)
+                            3 -> PuffsPage(ble,currentDate)
                             4 -> ThemesPage(ble,onPickImage={imagePicker.launch("image/*")},onConnect={chooseDevice()})
                             else -> MorePage(ble,onConnect={chooseDevice()})
                         }
@@ -161,9 +189,9 @@ class MainActivity:ComponentActivity(){
             ble.connectDevice(it);deviceChooser=false
         })
         if(settingsPermission)AlertDialog(onDismissRequest={settingsPermission=false},
-            title={Text("Permissions nécessaires")},
-            text={Text("Autorise Appareils à proximité et Localisation précise dans Android pour détecter la BT200.")},
-            confirmButton={TextButton(onClick={settingsPermission=false}){Text("Compris")}})
+            title={Text(tr("Permissions nécessaires"))},
+            text={Text(tr("Autorise Appareils à proximité et Localisation précise dans Android pour détecter la BT200."))},
+            confirmButton={TextButton(onClick={settingsPermission=false}){Text(tr("Compris"))}})
     }
 }
 
@@ -176,12 +204,12 @@ class MainActivity:ComponentActivity(){
 @Composable private fun Label(title:String,eyebrow:String?=null){
     Column(Modifier.padding(bottom=13.dp)){
         eyebrow?.let{Text(it.uppercase(),fontSize=10.sp,letterSpacing=2.sp,color=Gold,fontWeight=FontWeight.Bold)}
-        Text(title,fontSize=23.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.6).sp)
+        Text(tr(title),fontSize=23.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.6).sp)
     }
 }
 @Composable private fun Micro(label:String,value:String,accent:Color=TextMain,modifier:Modifier=Modifier){
     Column(modifier){
-        Text(label.uppercase(),fontSize=10.sp,letterSpacing=1.sp,color=Muted)
+        Text(tr(label).uppercase(CentaurixUi.locale()),fontSize=10.sp,letterSpacing=1.sp,color=Muted)
         Spacer(Modifier.height(6.dp))
         Text(value,fontSize=19.sp,fontWeight=FontWeight.SemiBold,color=accent)
     }
@@ -193,7 +221,7 @@ class MainActivity:ComponentActivity(){
             disabledContainerColor=Raised,disabledContentColor=Muted)){
         Icon(icon,null,modifier=Modifier.size(19.dp))
         Spacer(Modifier.width(9.dp))
-        Text(text,fontSize=14.sp,fontWeight=FontWeight.Bold)
+        Text(tr(text),fontSize=14.sp,fontWeight=FontWeight.Bold)
     }
 }
 @Composable private fun GhostButton(text:String,icon:androidx.compose.ui.graphics.vector.ImageVector=Icons.Rounded.Refresh,
@@ -201,14 +229,14 @@ class MainActivity:ComponentActivity(){
     OutlinedButton(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().height(51.dp),
         shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,Line)){
         Icon(icon,null,modifier=Modifier.size(17.dp));Spacer(Modifier.width(9.dp))
-        Text(text,fontWeight=FontWeight.SemiBold,fontSize=13.sp)
+        Text(tr(text),fontWeight=FontWeight.SemiBold,fontSize=13.sp)
     }
 }
 @Composable private fun Pill(label:String,active:Boolean,modifier:Modifier=Modifier,onClick:()->Unit){
     Surface(onClick=onClick,modifier=modifier,
         shape=RoundedCornerShape(14.dp),color=if(active)Gold.copy(alpha=.16f) else Raised,
         border=BorderStroke(1.dp,if(active)Gold.copy(alpha=.6f) else Line)){
-        Text(label,Modifier.padding(horizontal=14.dp,vertical=12.dp),
+        Text(tr(label),Modifier.padding(horizontal=14.dp,vertical=12.dp),
             color=if(active)GoldLight else Muted,fontSize=13.sp,fontWeight=FontWeight.Bold)
     }
 }
@@ -227,12 +255,12 @@ class MainActivity:ComponentActivity(){
                     Text(if(ble.connected)"BT200 • EN LIGNE" else "BT200 • HORS LIGNE",
                         color=GoldLight,fontSize=11.sp,letterSpacing=1.8.sp,fontWeight=FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    if(ble.connected) Text("${ble.strength} dBm",fontSize=11.sp,color=Muted)
+                    if(ble.connected) Text(tr("${ble.strength} dBm"),fontSize=11.sp,color=Muted)
                 }
                 Row(verticalAlignment=Alignment.Bottom){
                     Text(if(ble.connected)"${status?.power?: "—"}" else "—",fontSize=81.sp,
                         fontWeight=FontWeight.Light,letterSpacing=(-4).sp,lineHeight=86.sp)
-                    Text("W",fontSize=29.sp,color=Gold,modifier=Modifier.padding(start=9.dp,bottom=14.dp))
+                    Text(tr("W"),fontSize=29.sp,color=Gold,modifier=Modifier.padding(start=9.dp,bottom=14.dp))
                     Spacer(Modifier.weight(1f))
                     Column(horizontalAlignment=Alignment.End){
                         Text(if(ble.connected)Bt200Protocol.name(status?.mode?:1).uppercase() else "—",
@@ -240,8 +268,7 @@ class MainActivity:ComponentActivity(){
                         Text("PROFIL ${status?.slot ?: "—"}",color=Muted,fontSize=11.sp,letterSpacing=1.sp)
                     }
                 }
-                Text(if(ble.connected)"La box répond aux commandes de lecture."
-                    else "Ton tableau de bord prend vie à la connexion.",
+                Text(if(ble.connected)tr("Connectée") else tr("Connecter"),
                     fontSize=12.sp,color=Muted)
             }
         }
@@ -254,7 +281,7 @@ class MainActivity:ComponentActivity(){
             Spacer(Modifier.width(6.dp))
             Text(label,fontSize=12.sp,color=Muted)
             Spacer(Modifier.weight(1f))
-            Text("${percent.coerceIn(0,100)}%",fontSize=14.sp,fontWeight=FontWeight.Bold)
+            Text(tr("${percent.coerceIn(0,100)}%"),fontSize=14.sp,fontWeight=FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
         LinearProgressIndicator(progress={percent.coerceIn(0,100)/100f},
@@ -263,7 +290,7 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable private fun HomePage(ble:CentaurixBle,onConnect:()->Unit,onProfiles:()->Unit,onThemes:()->Unit,onPuffs:()->Unit){
-    Label("Ta box, autrement.","TABLEAU DE BORD")
+    Label("Tableau de bord","BT200")
     Hero(ble)
     Spacer(Modifier.height(14.dp))
     if(!ble.connected) {
@@ -271,7 +298,7 @@ class MainActivity:ComponentActivity(){
     }else {
         Panel {
             Row(verticalAlignment=Alignment.CenterVertically){
-                Text("Autonomie",fontSize=16.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Autonomie"),fontSize=16.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 Icon(Icons.Rounded.BatteryChargingFull,null,tint=Gold)
             }
@@ -282,7 +309,7 @@ class MainActivity:ComponentActivity(){
         }
         Spacer(Modifier.height(14.dp))
         Panel {
-            Text("En un coup d'œil",fontWeight=FontWeight.Bold,fontSize=16.sp)
+            Text(tr("En un coup d'œil"),fontWeight=FontWeight.Bold,fontSize=16.sp)
             Spacer(Modifier.height(15.dp))
             Row {
                 Micro("Bouffées","${ble.status?.puffs ?:0}",modifier=Modifier.weight(1f))
@@ -300,8 +327,8 @@ class MainActivity:ComponentActivity(){
                 Icon(Icons.Rounded.BarChart,null,tint=Gold,modifier=Modifier.size(25.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)){
-                    Text("Bouffées aujourd'hui",color=Muted,fontSize=12.sp)
-                    Text("${ble.todayPuffs} mesurées",fontSize=20.sp,fontWeight=FontWeight.Bold)
+                    Text(tr("Bouffées aujourd'hui"),color=Muted,fontSize=12.sp)
+                    Text(tr("${ble.todayPuffs} mesurées"),fontSize=20.sp,fontWeight=FontWeight.Bold)
                 }
                 Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
             }
@@ -312,16 +339,16 @@ class MainActivity:ComponentActivity(){
                 Column(Modifier.padding(18.dp)){
                     Icon(Icons.Rounded.Tune,null,tint=Gold)
                     Spacer(Modifier.height(20.dp))
-                    Text("Profils",fontWeight=FontWeight.Bold)
-                    Text("Puissance & modes",fontSize=11.sp,color=Muted)
+                    Text(tr("Profils"),fontWeight=FontWeight.Bold)
+                    Text(tr("Puissance & modes"),fontSize=11.sp,color=Muted)
                 }
             }
             Surface(onClick=onThemes,color=Card,shape=ShapeCard,modifier=Modifier.weight(1f),border=BorderStroke(1.dp,Line)){
                 Column(Modifier.padding(18.dp)){
                     Icon(Icons.Rounded.Palette,null,tint=Gold)
                     Spacer(Modifier.height(20.dp))
-                    Text("Thèmes",fontWeight=FontWeight.Bold)
-                    Text("Personnalisation",fontSize=11.sp,color=Muted)
+                    Text(tr("Thèmes"),fontWeight=FontWeight.Bold)
+                    Text(tr("Personnalisation"),fontSize=11.sp,color=Muted)
                 }
             }
         }
@@ -329,15 +356,15 @@ class MainActivity:ComponentActivity(){
         GhostButton("Actualiser les données",enabled=ble.connected,onClick=ble::refresh)
     }
     Spacer(Modifier.height(18.dp))
-    Text("CENTАURIX · CONNECTÉ EN LOCAL · SANS CLOUD",fontSize=10.sp,color=Muted,letterSpacing=1.2.sp,
+    Text(tr("CENTАURIX · CONNECTÉ EN LOCAL · SANS CLOUD"),fontSize=10.sp,color=Muted,letterSpacing=1.2.sp,
         modifier=Modifier.fillMaxWidth(),textAlign=TextAlign.Center)
 }
 @Composable private fun ConnectPrompt(onConnect:()->Unit){
     Panel{
         Icon(Icons.Rounded.BluetoothSearching,null,Modifier.size(34.dp),tint=Gold)
         Spacer(Modifier.height(12.dp))
-        Text("Ta BT200 n'est pas connectée",fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text("Active le Bluetooth dans le menu de la box, puis confirme avec le bouton central.",color=Muted,fontSize=13.sp)
+        Text(tr("Ta BT200 n'est pas connectée"),fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Active le Bluetooth dans le menu de la box, puis confirme avec le bouton central."),color=Muted,fontSize=13.sp)
         Spacer(Modifier.height(18.dp))
         GoldButton("Rechercher la BT200",Icons.Rounded.Bluetooth,onClick=onConnect)
     }
@@ -362,7 +389,7 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable private fun ProfilesPage(ble:CentaurixBle,onConnect:()->Unit){
-    Label("Réglages précis.","TES TROIS PROFILS")
+    Label("Profils","BT200")
     if(!ble.connected) {ConnectPrompt(onConnect);return}
     var slot by remember{mutableIntStateOf(1)}
     Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){
@@ -390,14 +417,14 @@ class MainActivity:ComponentActivity(){
     Panel{
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("Profil $slot",fontSize=21.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Profil $slot"),fontSize=21.sp,fontWeight=FontWeight.Bold)
                 Text(if(actual!=null)"Synchronisé depuis la box" else "Lecture en attente…",
                     fontSize=11.sp,color=if(actual!=null)Mint else Muted)
             }
             Icon(Icons.Rounded.Equalizer,null,tint=Gold,modifier=Modifier.size(29.dp))
         }
         Spacer(Modifier.height(20.dp))
-        Text("MODE",color=Muted,letterSpacing=1.6.sp,fontSize=11.sp)
+        Text(tr("MODE"),color=Muted,letterSpacing=1.6.sp,fontSize=11.sp)
         Spacer(Modifier.height(7.dp))
         ModePicker(edit.mode){ mode->
             edit=edit.copy(mode=mode,watts=if(mode in 3..5)edit.watts.coerceAtMost(100) else edit.watts,
@@ -406,7 +433,7 @@ class MainActivity:ComponentActivity(){
         }
         Spacer(Modifier.height(14.dp))
         if(edit.mode==7){
-            Text("Cette courbe répartit la puissance sur 8 étapes.",fontSize=12.sp,color=Muted)
+            Text(tr("Cette courbe répartit la puissance sur 8 étapes."),fontSize=12.sp,color=Muted)
             Spacer(Modifier.height(10.dp))
             edit.curve.forEachIndexed{index,v->
                 EditorSlider("Segment ${index+1} / 8",v.toFloat(),{new->
@@ -430,7 +457,7 @@ class MainActivity:ComponentActivity(){
             if(edit.mode==6)EditorSlider("Tension",edit.voltage.toFloat(),
                 {edit=edit.copy(voltage=(it*10).roundToInt()/10.0)},.7f..8f,"V")
             if(edit.mode==2){
-                Text("Réponse Turbo",color=Muted,fontSize=13.sp)
+                Text(tr("Réponse Turbo"),color=Muted,fontSize=13.sp)
                 Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
                     listOf("HARD","NORM","SOFT").forEachIndexed { index,title ->
                         Pill(title,edit.boost==index+1){ edit=edit.copy(boost=index+1) }
@@ -443,28 +470,28 @@ class MainActivity:ComponentActivity(){
         GoldButton("Envoyer le profil sur la box",Icons.Rounded.CheckCircle,
             enabled=actual!=null && !ble.busy){confirm=true}
         if(confirm)AlertDialog(onDismissRequest={confirm=false},
-            title={Text("Enregistrer sur la BT200 ?")},
+            title={Text(tr("Enregistrer sur la BT200 ?"))},
             text={Text("Profil $slot · ${Bt200Protocol.name(edit.mode)} · ${if(edit.mode==7)"Courbe VPC" else "${edit.watts} W"}. Tu peux revenir aux réglages précédents en relisant la box.")},
-            confirmButton={TextButton(onClick={confirm=false;ble.saveProfile(edit)}){Text("Confirmer")}},
-            dismissButton={TextButton(onClick={confirm=false}){Text("Annuler")}})
+            confirmButton={TextButton(onClick={confirm=false;ble.saveProfile(edit)}){Text(tr("Confirmer"))}},
+            dismissButton={TextButton(onClick={confirm=false}){Text(tr("Annuler"))}})
         Spacer(Modifier.height(11.dp))
         GhostButton("Relire le profil",Icons.Rounded.Refresh){ble.refresh()}
         Spacer(Modifier.height(8.dp))
         var reset by remember{mutableStateOf(false)}
         OutlinedButton(onClick={reset=true},enabled=!ble.busy,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp)){
-            Text("Réinitialiser ce profil",color=Danger)
+            Text(tr("Réinitialiser ce profil"),color=Danger)
         }
-        if(reset)AlertDialog(onDismissRequest={reset=false},title={Text("Réinitialiser le profil $slot ?")},
-            text={Text("Cette opération effacera ses réglages enregistrés sur la BT200.")},
-            confirmButton={TextButton(onClick={reset=false;ble.resetProfile(slot)}){Text("Réinitialiser",color=Danger)}},
-            dismissButton={TextButton(onClick={reset=false}){Text("Annuler")}})
+        if(reset)AlertDialog(onDismissRequest={reset=false},title={Text(tr("Réinitialiser le profil $slot ?"))},
+            text={Text(tr("Cette opération effacera ses réglages enregistrés sur la BT200."))},
+            confirmButton={TextButton(onClick={reset=false;ble.resetProfile(slot)}){Text(tr("Réinitialiser"),color=Danger)}},
+            dismissButton={TextButton(onClick={reset=false}){Text(tr("Annuler"))}})
     }
     Spacer(Modifier.height(12.dp))
-    Text("Les réglages sont envoyés uniquement après confirmation, puis relus après l'accusé de réception du firmware.",
+    Text(tr("Les réglages sont envoyés uniquement après confirmation, puis relus après l'accusé de réception du firmware."),
         color=Muted,fontSize=12.sp,modifier=Modifier.padding(horizontal=5.dp))
 }
 @Composable private fun VpcPage(ble:CentaurixBle,onConnect:()->Unit){
-    Label("Sculpte ta courbe.","VPC STUDIO")
+    Label("Courbe VPC","BT200")
     if(!ble.connected){ConnectPrompt(onConnect);return}
     var slot by remember{mutableIntStateOf(1)}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -483,8 +510,8 @@ class MainActivity:ComponentActivity(){
         Spacer(Modifier.height(10.dp))
     }
     Panel{
-        Text("Courbe de puissance",fontWeight=FontWeight.Bold,fontSize=18.sp)
-        Text("Huit points de réglage • 5 à 200 watts",fontSize=12.sp,color=Muted)
+        Text(tr("Courbe de puissance"),fontWeight=FontWeight.Bold,fontSize=18.sp)
+        Text(tr("Huit points de réglage • 5 à 200 watts"),fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(22.dp))
         Canvas(Modifier.fillMaxWidth().height(160.dp)){
             val max=200f
@@ -514,16 +541,16 @@ class MainActivity:ComponentActivity(){
         var confirm by remember{mutableStateOf(false)}
         GoldButton("Enregistrer la courbe VPC",Icons.Rounded.Save,
             enabled=actual!=null && !ble.busy){confirm=true}
-        if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text("Activer la courbe VPC ?")},
-            text={Text("Les huit points seront écrits dans le profil $slot de ta box.")},
+        if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text(tr("Activer la courbe VPC ?"))},
+            text={Text(tr("Les huit points seront écrits dans le profil $slot de ta box."))},
             confirmButton={TextButton(onClick={
                 confirm=false;ble.saveProfile(Bt200Protocol.Profile(slot,7,curve=points))
-            }){Text("Enregistrer")}},
-            dismissButton={TextButton(onClick={confirm=false}){Text("Annuler")}})
+            }){Text(tr("Enregistrer"))}},
+            dismissButton={TextButton(onClick={confirm=false}){Text(tr("Annuler"))}})
     }
 }
 @Composable private fun ThemesPage(ble:CentaurixBle,onPickImage:()->Unit,onConnect:()->Unit){
-    Label("L'écran à ton image.","THÈMES & FONDS")
+    Label("Thèmes de la box","BT200")
     if(!ble.connected){ConnectPrompt(onConnect);return}
     var slot by remember{mutableIntStateOf(1)}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -531,8 +558,8 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(14.dp))
     Panel{
-        Text("Collections officielles",fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text("Cinq variantes intégrées • aperçus illustratifs, pouvant différer des vrais visuels.",
+        Text(tr("Collections officielles"),fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Cinq variantes intégrées • aperçus illustratifs, pouvant différer des vrais visuels."),
             fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(16.dp))
         val previews=listOf("Aube","Brume","Nébuleuse","Magma","Minuit")
@@ -566,7 +593,7 @@ class MainActivity:ComponentActivity(){
         GoldButton("Appliquer la variante $selected",Icons.Rounded.Palette,
             enabled=!ble.busy){ble.applyTheme(slot,selected)}
         Spacer(Modifier.height(8.dp))
-        Text("La sélection est envoyée au firmware avec accusé de réception.",
+        Text(tr("La sélection est envoyée au firmware avec accusé de réception."),
             color=Muted,fontSize=11.sp)
     }
     Spacer(Modifier.height(15.dp))
@@ -575,30 +602,30 @@ class MainActivity:ComponentActivity(){
             Icon(Icons.Rounded.Wallpaper,null,tint=Gold,modifier=Modifier.size(28.dp))
             Spacer(Modifier.width(11.dp))
             Column {
-                Text("Mon propre fond d'écran",fontSize=17.sp,fontWeight=FontWeight.Bold)
-                Text("Ton image, directement sur la BT200",color=Muted,fontSize=12.sp)
+                Text(tr("Mon propre fond d'écran"),fontSize=17.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Ton image, directement sur la BT200"),color=Muted,fontSize=12.sp)
             }
         }
         Spacer(Modifier.height(16.dp))
-        Text("L'image est recadrée automatiquement aux formats 240×320 et 90×120, puis encodée en RGB565.",
+        Text(tr("L'image est recadrée automatiquement aux formats 240×320 et 90×120, puis encodée en RGB565."),
             fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(16.dp))
         if(ble.transferOngoing){
             val p by animateFloatAsState(ble.transferProgress,label="upload")
-            Text("Transfert en cours… ${(p*100).roundToInt()}%",color=Gold,fontWeight=FontWeight.Bold)
+            Text(tr("Transfert en cours… ${(p*100).roundToInt()}%"),color=Gold,fontWeight=FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(progress={p},modifier=Modifier.fillMaxWidth().height(9.dp).clip(CircleShape),
                 color=Gold,trackColor=Raised)
         }else GoldButton("Choisir et transférer une image",Icons.Rounded.UploadFile,
             enabled=!ble.busy && ble.mtu>=213,onClick=onPickImage)
         Spacer(Modifier.height(9.dp))
-        Text("Transfert expérimental : ne coupe pas la connexion pendant l'envoi. MTU : ${ble.mtu}.",
+        Text(tr("Transfert expérimental : ne coupe pas la connexion pendant l'envoi. MTU : ${ble.mtu}."),
             color=Muted,fontSize=11.sp)
     }
 }
 @Composable private fun MorePage(ble:CentaurixBle,onConnect:()->Unit){
     val ctx=LocalContext.current
-    Label("Tout est sous contrôle.","CENTRE DE CONTRÔLE")
+    Label("Réglages","CENTAURIX")
     Panel{
         Row(verticalAlignment=Alignment.CenterVertically){
             Icon(Icons.Rounded.BluetoothAudio,null,tint=Gold,modifier=Modifier.size(25.dp))
@@ -619,8 +646,8 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(15.dp))
     Panel{
-        Text("Journal & confidentialité",fontSize=17.sp,fontWeight=FontWeight.Bold)
-        Text("Aucun compte, aucune télémétrie externe. Les données restent sur ton téléphone.",
+        Text(tr("Journal & confidentialité"),fontSize=17.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Aucun compte, aucune télémétrie externe. Les données restent sur ton téléphone."),
             color=Muted,fontSize=12.sp)
         Spacer(Modifier.height(15.dp))
         GhostButton("Partager le diagnostic",Icons.Rounded.Share){
@@ -635,36 +662,36 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(15.dp))
     Panel {
-        Text("Diagnostics : lectures du compteur",fontWeight=FontWeight.Bold,fontSize=17.sp)
-        Text("Valeurs cumulatives brutes (pas les puffs de chaque jour). Voir Puffs pour le suivi quotidien.",fontSize=12.sp,color=Muted)
+        Text(tr("Diagnostics : lectures du compteur"),fontWeight=FontWeight.Bold,fontSize=17.sp)
+        Text(tr("Valeurs cumulatives brutes (pas les puffs de chaque jour). Voir Puffs pour le suivi quotidien."),fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(12.dp))
         ble.history.takeLast(8).reversed().forEach{p->
             Row(Modifier.fillMaxWidth().padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
                 Text(SimpleDateFormat("dd/MM HH:mm",Locale.FRANCE).format(Date(p.timestamp)),
                     color=Muted,fontSize=12.sp,modifier=Modifier.weight(1f))
-                Text("${p.count} bouffées",fontSize=12.sp,fontWeight=FontWeight.Bold)
+                Text(tr("${p.count} bouffées"),fontSize=12.sp,fontWeight=FontWeight.Bold)
             }
             HorizontalDivider(color=Line.copy(alpha=.5f))
         }
         Spacer(Modifier.height(12.dp))
         var confirm by remember{mutableStateOf(false)}
         OutlinedButton(onClick={confirm=true},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){
-            Text("Effacer l'historique local",color=Danger)
+            Text(tr("Effacer l'historique local"),color=Danger)
         }
-        if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text("Effacer l'historique ?")},
-            text={Text("Les données enregistrées sur le téléphone seront supprimées, sans modifier la BT200.")},
-            confirmButton={TextButton(onClick={confirm=false;ble.clearHistory()}){Text("Effacer",color=Danger)}},
-            dismissButton={TextButton(onClick={confirm=false}){Text("Annuler")}})
+        if(confirm)AlertDialog(onDismissRequest={confirm=false},title={Text(tr("Effacer l'historique ?"))},
+            text={Text(tr("Les données enregistrées sur le téléphone seront supprimées, sans modifier la BT200."))},
+            confirmButton={TextButton(onClick={confirm=false;ble.clearHistory()}){Text(tr("Effacer"),color=Danger)}},
+            dismissButton={TextButton(onClick={confirm=false}){Text(tr("Annuler"))}})
     }
     Spacer(Modifier.height(15.dp))
-    Text("CENTAURIX · 1.0 BETA 2\nInspiré du langage visuel Cloudix\nProjet indépendant, non affilié à Lost Vape",
+    Text(tr("CENTAURIX · 1.0 BETA 2\nInspiré du langage visuel Cloudix\nProjet indépendant, non affilié à Lost Vape"),
         textAlign=TextAlign.Center,color=Muted,fontSize=11.sp,lineHeight=18.sp,
         modifier=Modifier.fillMaxWidth())
 }
 
-@Composable private fun PuffsPage(ble:CentaurixBle) {
-    Label("Chaque jour compte.","SUIVI DES BOUFFÉES")
-    val now=java.time.LocalDate.now()
+@Composable private fun PuffsPage(ble:CentaurixBle,currentDate:LocalDate) {
+    Label("Statistiques","BOUFFÉES")
+    val now=currentDate
     val days=ble.puffDays.toList()
     val map=days.associateBy { it.date }
     val today=map[now.toString()]
@@ -672,20 +699,20 @@ class MainActivity:ComponentActivity(){
     val total7=last7.sumOf { map[it]?.puffs ?: 0L }
     val last30=(29L downTo 0L).map { now.minusDays(it).toString() }
     val total30=last30.sumOf { map[it]?.puffs ?: 0L }
-    val formatter=java.time.format.DateTimeFormatter.ofPattern("EEE",Locale.FRANCE)
+    val formatter=java.time.format.DateTimeFormatter.ofPattern("EEE",CentaurixUi.locale())
     val max7=last7.maxOfOrNull { map[it]?.puffs ?: 0L }?.coerceAtLeast(1L) ?: 1L
-    var selectedDay by remember { mutableStateOf(now.toString()) }
+    var selectedDay by remember(now) { mutableStateOf(now.toString()) }
     var monthOffset by remember { mutableIntStateOf(0) }
     val month=java.time.YearMonth.from(now).plusMonths(monthOffset.toLong())
 
     Panel {
         Row(verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){
-                Text("AUJOURD'HUI",fontSize=11.sp,letterSpacing=1.6.sp,color=Gold)
+                Text(tr("AUJOURD'HUI"),fontSize=11.sp,letterSpacing=1.6.sp,color=Gold)
                 Spacer(Modifier.height(6.dp))
                 Text(ble.todayPuffs.toString(),fontSize=69.sp,fontWeight=FontWeight.Light,
                     letterSpacing=(-2).sp,lineHeight=72.sp)
-                Text("bouffées observées",color=Muted,fontSize=13.sp)
+                Text(tr("bouffées observées"),color=Muted,fontSize=13.sp)
             }
             Surface(shape=RoundedCornerShape(22.dp),color=Gold.copy(alpha=.12f)){
                 Icon(Icons.Rounded.ShowChart,null,tint=Gold,
@@ -703,8 +730,8 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(15.dp))
     Panel {
-        Text("Cette semaine",fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text("Bouffées enregistrées par date • touche une barre pour voir le détail.",
+        Text(tr("Cette semaine"),fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Bouffées enregistrées par date • touche une barre pour voir le détail."),
             color=Muted,fontSize=12.sp)
         Spacer(Modifier.height(25.dp))
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),
@@ -736,7 +763,7 @@ class MainActivity:ComponentActivity(){
         Surface(color=Raised,shape=RoundedCornerShape(13.dp),modifier=Modifier.fillMaxWidth()){
             Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
                 Text(java.time.LocalDate.parse(selectedDay).format(
-                    java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy",Locale.FRANCE)),
+                    java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy",CentaurixUi.locale())),
                     color=Muted,fontSize=12.sp,modifier=Modifier.weight(1f))
                 Text(if(selected!=null)"${selected.puffs} puffs" else "Pas de mesure",
                     color=GoldLight,fontSize=14.sp,fontWeight=FontWeight.Bold)
@@ -746,10 +773,10 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(15.dp))
     Panel {
         Row(verticalAlignment=Alignment.CenterVertically){
-            Text("Historique quotidien",fontSize=18.sp,fontWeight=FontWeight.Bold,
+            Text(tr("Historique quotidien"),fontSize=18.sp,fontWeight=FontWeight.Bold,
                 modifier=Modifier.weight(1f))
             IconButton(onClick={monthOffset--}){Icon(Icons.Rounded.ChevronLeft,null,tint=Gold)}
-            Text(month.format(java.time.format.DateTimeFormatter.ofPattern("MMM yy",Locale.FRANCE)),
+            Text(month.format(java.time.format.DateTimeFormatter.ofPattern("MMM yy",CentaurixUi.locale())),
                 fontSize=12.sp,color=GoldLight)
             IconButton(onClick={if(monthOffset<0)monthOffset++},enabled=monthOffset<0){
                 Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
@@ -757,16 +784,16 @@ class MainActivity:ComponentActivity(){
         }
         val monthDays=days.filter {it.date.startsWith(month.toString())}.sortedByDescending{it.date}
         if(monthDays.isEmpty()){
-            Text("Aucune lecture enregistrée ce mois-là.",color=Muted,fontSize=13.sp,
+            Text(tr("Aucune lecture enregistrée ce mois-là."),color=Muted,fontSize=13.sp,
                 modifier=Modifier.padding(vertical=17.dp))
         } else {
             monthDays.forEach {day->
                 Row(Modifier.fillMaxWidth().padding(vertical=11.dp),
                     verticalAlignment=Alignment.CenterVertically){
                     Text(java.time.LocalDate.parse(day.date).format(
-                        java.time.format.DateTimeFormatter.ofPattern("EEE dd MMM",Locale.FRANCE)),
+                        java.time.format.DateTimeFormatter.ofPattern("EEE dd MMM",CentaurixUi.locale())),
                         color=Muted,fontSize=13.sp,modifier=Modifier.weight(1f))
-                    Text("${day.puffs} bouffées",fontSize=14.sp,fontWeight=FontWeight.SemiBold)
+                    Text(tr("${day.puffs} bouffées"),fontSize=14.sp,fontWeight=FontWeight.SemiBold)
                 }
                 HorizontalDivider(color=Line.copy(alpha=.55f))
             }
@@ -776,7 +803,7 @@ class MainActivity:ComponentActivity(){
     Panel {
         Icon(Icons.Rounded.Info,null,tint=Gold,modifier=Modifier.size(22.dp))
         Spacer(Modifier.height(10.dp))
-        Text("Comment fonctionne le suivi ?",fontSize=16.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Comment fonctionne le suivi ?"),fontSize=16.sp,fontWeight=FontWeight.Bold)
         Spacer(Modifier.height(7.dp))
         Text("La BT200 fournit un compteur cumulatif, pas l'heure de chaque bouffée. " +
             "Centaurix calcule les augmentations entre deux lectures effectuées le même jour, " +
@@ -784,7 +811,7 @@ class MainActivity:ComponentActivity(){
             fontSize=12.sp,color=Muted,lineHeight=19.sp)
         if(ble.missingDayPuffs>0) {
             Spacer(Modifier.height(9.dp))
-            Text("${ble.missingDayPuffs} bouffées non attribuées : relevées entre deux journées différentes.",
+            Text(tr("${ble.missingDayPuffs} bouffées non attribuées : relevées entre deux journées différentes."),
                 fontSize=12.sp,color=GoldLight)
         }
         Spacer(Modifier.height(7.dp))
@@ -797,10 +824,10 @@ class MainActivity:ComponentActivity(){
             wipe=true
         }
         if(wipe)AlertDialog(onDismissRequest={wipe=false},
-            title={Text("Supprimer le suivi ?")},
-            text={Text("Les relevés journaliers locaux seront supprimés. Le compteur de la BT200 ne sera pas modifié.")},
-            confirmButton={TextButton(onClick={wipe=false;ble.clearPuffTracking()}){Text("Supprimer",color=Danger)}},
-            dismissButton={TextButton(onClick={wipe=false}){Text("Annuler")}})
+            title={Text(tr("Supprimer le suivi ?"))},
+            text={Text(tr("Les relevés journaliers locaux seront supprimés. Le compteur de la BT200 ne sera pas modifié."))},
+            confirmButton={TextButton(onClick={wipe=false;ble.clearPuffTracking()}){Text(tr("Supprimer"),color=Danger)}},
+            dismissButton={TextButton(onClick={wipe=false}){Text(tr("Annuler"))}})
     }
 }
 
@@ -812,7 +839,7 @@ class MainActivity:ComponentActivity(){
                 Row(verticalAlignment=Alignment.CenterVertically){
                     Icon(Icons.Rounded.BluetoothSearching,null,tint=Gold)
                     Spacer(Modifier.width(9.dp))
-                    Text("Associer la BT200",fontSize=18.sp,fontWeight=FontWeight.Bold,
+                    Text(tr("Associer la BT200"),fontSize=18.sp,fontWeight=FontWeight.Bold,
                         modifier=Modifier.weight(1f))
                     IconButton(onClick={ble.stopScan();onClose()}){Icon(Icons.Rounded.Close,null)}
                 }
@@ -830,7 +857,7 @@ class MainActivity:ComponentActivity(){
                                 Spacer(Modifier.width(11.dp))
                                 Column(Modifier.weight(1f)){
                                     Text(d.name,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                    Text("${d.rssi} dBm",fontSize=11.sp,color=Muted)
+                                    Text(tr("${d.rssi} dBm"),fontSize=11.sp,color=Muted)
                                 }
                                 Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
                             }
@@ -840,7 +867,7 @@ class MainActivity:ComponentActivity(){
                 Spacer(Modifier.height(13.dp))
                 GhostButton("Relancer le scan",Icons.Rounded.Refresh,onClick=ble::startScan)
                 Spacer(Modifier.height(6.dp))
-                Text("Sur la box : Bluetooth ON + validation avec le bouton central.",
+                Text(tr("Sur la box : Bluetooth ON + validation avec le bouton central."),
                     color=Muted,fontSize=11.sp)
             }
         }
