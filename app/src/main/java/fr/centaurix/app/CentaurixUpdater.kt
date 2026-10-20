@@ -67,13 +67,14 @@ class CentaurixUpdater(private val context:Context) {
                             url,sha.lowercase())
                     }
                 }
+                val available=best
                 main.post {
                     if(closed)return@post
                     busy=false
-                    if(best!=null){
-                        update=best
+                    if(available!=null){
+                        update=available
                         dismissed=false
-                        message="Mise à jour ${best.versionName} disponible"
+                        message="Mise à jour ${available.versionName} disponible"
                     }else if(!silent)message="Centaurix est à jour."
                 }
             }catch(e:Exception){
