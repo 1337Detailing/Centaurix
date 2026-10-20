@@ -75,7 +75,7 @@ class MainActivity:ComponentActivity(){
     CentaurixUi.systemDark=isSystemInDarkTheme()
     val dark=CentaurixUi.dark
     val activity=context as? ComponentActivity
-    val scheme=(if(dark)darkColorScheme() else lightColorScheme()).copy(primary=Gold,onPrimary=if(dark)Color(0xFF1B160C) else Color.White,
+    val scheme=(if(dark)darkColorScheme() else lightColorScheme()).copy(primary=Gold,onPrimary=if(Gold.luminance()>.48f)Color.Black else Color.White,
         primaryContainer=Color(0xFF42371F),background=Back,onBackground=TextMain,
         surface=Card,onSurface=TextMain,surfaceVariant=Raised,onSurfaceVariant=Muted,
         outline=Line,error=Danger)
@@ -122,7 +122,7 @@ class MainActivity:ComponentActivity(){
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start=20.dp,end=20.dp,top=12.dp,bottom=14.dp),
                     verticalAlignment=Alignment.CenterVertically){
                     Box(Modifier.size(49.dp).clip(RoundedCornerShape(16.dp)).background(
-                        Brush.linearGradient(listOf(Color(0xFF352E1C),Color(0xFF1B1D25)))),contentAlignment=Alignment.Center){
+                        Brush.linearGradient(listOf(Gold.copy(alpha=.18f),Raised))),contentAlignment=Alignment.Center){
                         Icon(Icons.Rounded.Bolt,null,tint=Gold,modifier=Modifier.size(28.dp))
                     }
                     Spacer(Modifier.width(13.dp))
@@ -142,7 +142,7 @@ class MainActivity:ComponentActivity(){
                 }
             },
             bottomBar={
-                NavigationBar(containerColor=Color(0xFF14151B),tonalElevation=0.dp,
+                NavigationBar(containerColor=Card,tonalElevation=0.dp,
                     modifier=Modifier.navigationBarsPadding().border(.5.dp,Line, RoundedCornerShape(topStart=22.dp,topEnd=22.dp))) {
                     val tabs=listOf(
                         Triple("Accueil",Icons.Rounded.Home,0),
@@ -217,7 +217,7 @@ class MainActivity:ComponentActivity(){
 @Composable private fun GoldButton(text:String,icon:androidx.compose.ui.graphics.vector.ImageVector=Icons.Rounded.ArrowForward,
                                   enabled:Boolean=true,onClick:()->Unit){
     Button(onClick=onClick,enabled=enabled,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth().height(54.dp),
-        colors=ButtonDefaults.buttonColors(containerColor=Gold,contentColor=Color(0xFF1C170D),
+        colors=ButtonDefaults.buttonColors(containerColor=Gold,contentColor=if(Gold.luminance()>.48f)Color.Black else Color.White,
             disabledContainerColor=Raised,disabledContentColor=Muted)){
         Icon(icon,null,modifier=Modifier.size(19.dp))
         Spacer(Modifier.width(9.dp))
@@ -244,10 +244,10 @@ class MainActivity:ComponentActivity(){
     val status=ble.status
     val transition=rememberInfiniteTransition(label="hero-glow")
     val glow by transition.animateFloat(initialValue=.25f,targetValue=.52f,infiniteRepeatable(tween(2200),RepeatMode.Reverse),label="glow")
-    Surface(color=Color(0xFF171820),shape=RoundedCornerShape(30.dp),modifier=Modifier.fillMaxWidth(),
+    Surface(color=Card,shape=RoundedCornerShape(30.dp),modifier=Modifier.fillMaxWidth(),
         border=BorderStroke(1.dp,Gold.copy(alpha=.20f))){
         Box(Modifier.fillMaxWidth().height(255.dp).background(
-            Brush.radialGradient(listOf(Gold.copy(alpha=glow*.23f),Card,Color(0xFF15161C)),radius=600f))){
+            Brush.radialGradient(listOf(Gold.copy(alpha=glow*.17f),Card,Back),radius=600f))){
             Column(Modifier.fillMaxSize().padding(22.dp),verticalArrangement=Arrangement.SpaceBetween){
                 Row(verticalAlignment=Alignment.CenterVertically){
                     Icon(Icons.Rounded.BluetoothConnected,null,tint=Gold,modifier=Modifier.size(18.dp))
@@ -623,9 +623,89 @@ class MainActivity:ComponentActivity(){
             color=Muted,fontSize=11.sp)
     }
 }
+
+@Composable private fun AppearanceSettings() {
+    Panel {
+        Row(verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Language,null,tint=Gold)
+            Spacer(Modifier.width(11.dp))
+            Text(tr("Langue"),fontWeight=FontWeight.Bold,fontSize=17.sp)
+        }
+        Spacer(Modifier.height(13.dp))
+        val languages=listOf(
+            "system" to tr("Automatique"),
+            "fr" to "Français", "en" to "English", "de" to "Deutsch",
+            "ru" to "Русский", "pl" to "Polski"
+        )
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            items(languages){(code,label)->
+                Pill(label,CentaurixUi.language==code){CentaurixUi.setLanguage(code)}
+            }
+        }
+    }
+    Spacer(Modifier.height(14.dp))
+    Panel {
+        Row(verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Rounded.ColorLens,null,tint=Gold)
+            Spacer(Modifier.width(11.dp))
+            Text(tr("Apparence"),fontWeight=FontWeight.Bold,fontSize=17.sp)
+        }
+        Spacer(Modifier.height(13.dp))
+        val modes=listOf(
+            "system" to tr("Système"),
+            "dark" to tr("Sombre"),
+            "light" to tr("Clair"),
+            "amoled" to "AMOLED"
+        )
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            items(modes){(code,label)->
+                Pill(label,CentaurixUi.theme==code){CentaurixUi.setTheme(code)}
+            }
+        }
+        Spacer(Modifier.height(22.dp))
+        Text(tr("Couleur d'accent"),color=Muted,fontSize=13.sp)
+        Spacer(Modifier.height(12.dp))
+        val accents=listOf(
+            "gold" to Color(0xFFD8B65A),
+            "blue" to Color(0xFF5796E5),
+            "purple" to Color(0xFFAE8CE8),
+            "teal" to Color(0xFF51B5B7),
+            "coral" to Color(0xFFE68C76),
+            "green" to Color(0xFF7BC9A2)
+        )
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+            accents.forEach { (id,color)->
+                Box(Modifier.size(39.dp)
+                    .border(if(CentaurixUi.accent==id)2.dp else 1.dp,
+                        if(CentaurixUi.accent==id)TextMain else Line,CircleShape)
+                    .padding(5.dp).clip(CircleShape).background(color)
+                    .clickable { CentaurixUi.setAccent(id) },
+                    contentAlignment=Alignment.Center) {
+                    if(CentaurixUi.accent==id)Icon(Icons.Rounded.Check,null,
+                        tint=if(color.luminance()>.5f)Color.Black else Color.White,
+                        modifier=Modifier.size(17.dp))
+                }
+            }
+        }
+        Spacer(Modifier.height(15.dp))
+        var hex by remember { mutableStateOf(CentaurixUi.customHex) }
+        var invalid by remember { mutableStateOf(false) }
+        OutlinedTextField(value=hex,onValueChange={hex=it;invalid=false},
+            label={Text("HEX")},isError=invalid,singleLine=true,
+            modifier=Modifier.fillMaxWidth(),
+            trailingIcon={
+                IconButton(onClick={ invalid=!CentaurixUi.setCustomHex(hex) }){
+                    Icon(Icons.Rounded.Check,null,tint=Gold)
+                }
+            })
+    }
+}
+
 @Composable private fun MorePage(ble:CentaurixBle,onConnect:()->Unit){
     val ctx=LocalContext.current
     Label("Réglages","CENTAURIX")
+    AppearanceSettings()
+    Spacer(Modifier.height(14.dp))
     Panel{
         Row(verticalAlignment=Alignment.CenterVertically){
             Icon(Icons.Rounded.BluetoothAudio,null,tint=Gold,modifier=Modifier.size(25.dp))

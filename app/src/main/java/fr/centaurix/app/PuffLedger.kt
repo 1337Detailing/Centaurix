@@ -46,7 +46,7 @@ class PuffLedger {
         }
         val reset=previous!=null && counter<previous.counter
         val delta=if(previous==null || reset)0L else (counter-previous.counter).coerceAtLeast(0)
-        val deltaTime=if(previous==null || reset)0L else (time-previous.time).coerceAtLeast(0)
+        val deltaTime=if(previous==null || time<previous.time)0L else (time-previous.time).coerceAtLeast(0)
         val sameDay=previous!=null && previous.date==date
         if(previous!=null && !sameDay && !reset) {
             unassignedPuffs+=delta;unassignedTime+=deltaTime

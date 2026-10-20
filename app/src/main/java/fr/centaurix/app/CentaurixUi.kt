@@ -133,7 +133,7 @@ object CentaurixUi {
         val isDark=dark
         val amoled=theme=="amoled"
         return CentaurixPalette(
-            primary=Color(color),
+            primary=Color(color.toInt()),
             background=if(!isDark)Color(0xFFFAF9F6) else if(amoled)Color.Black else Color(0xFF0B0C11),
             surface=if(!isDark)Color.White else if(amoled)Color(0xFF101010) else Color(0xFF171920),
             raised=if(!isDark)Color(0xFFF0EEE9) else if(amoled)Color(0xFF1A1A1A) else Color(0xFF22242D),

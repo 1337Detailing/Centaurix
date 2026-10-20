@@ -64,6 +64,7 @@ class CentaurixBle(private val context:Context) {
     private var savedUseTime=Long.MIN_VALUE
     private var savedDay=""
     init { refreshPuffScreen() }
+    fun refreshDailyStats() { refreshPuffScreen() }
     private fun refreshPuffScreen() {
         puffDays.clear();puffDays.addAll(puffLedger.history())
         val today=puffStore.date()
