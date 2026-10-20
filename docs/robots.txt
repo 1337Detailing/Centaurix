@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://1337detailing.github.io/Centaurix/sitemap.xml
