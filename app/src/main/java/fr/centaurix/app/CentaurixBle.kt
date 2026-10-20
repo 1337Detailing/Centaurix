@@ -95,6 +95,9 @@ class CentaurixBle(private val context:Context) {
     private var scanVersion=0
     private var notificationSetup=false
     private var pollActive=false
+    private var retryAllowed=false
+    private var reconnectFailures=0
+    private var retryTask:Runnable?=null
     private val packetsToSave=mutableListOf<ByteArray>()
     private var uploading:List<ByteArray>?=null
     private var chunkIndex=0
@@ -178,13 +181,53 @@ class CentaurixBle(private val context:Context) {
         }
     }
     fun connectDevice(d:FoundDevice){
-        if(!permissionReady()) {say("Autorise les appareils Bluetooth");return}
+        retryAllowed=true
+        reconnectFailures=0
+        connectRemembered(d)
+    }
+    fun restoreConnection() {
+        // Never start scanning without user interaction; reconnect only a known box.
+        if(permissionReady() && BluetoothAdapter.checkBluetoothAddress(lastSeenId)) reconnect()
+    }
+    fun reconnect(){
+        if(connected || gatt!=null)return
+        val address=prefs.getString("device","") ?: ""
+        if(!BluetoothAdapter.checkBluetoothAddress(address)) {
+            startScan()
+            return
+        }
+        retryAllowed=true
+        connectRemembered(FoundDevice(address,deviceName,-70))
+    }
+    private fun cancelRetry() {
+        retryTask?.let(main::removeCallbacks)
+        retryTask=null
+    }
+    private fun scheduleReconnect(){
+        if(!retryAllowed || !BluetoothAdapter.checkBluetoothAddress(lastSeenId) || retryTask!=null)return
+        val seconds=(3 shl reconnectFailures.coerceAtMost(3)).coerceAtMost(30)
+        reconnectFailures=(reconnectFailures+1).coerceAtMost(6)
+        ui { connection="Reconnexion automatique dans ${seconds}s…" }
+        val task=Runnable {
+            retryTask=null
+            if(!connected && retryAllowed && gatt==null) reconnect()
+        }
+        retryTask=task
+        main.postDelayed(task,seconds*1000L)
+    }
+    private fun connectRemembered(d:FoundDevice) {
+        cancelRetry()
+        if(!permissionReady() || adapter?.isEnabled!=true){
+            say("Bluetooth indisponible : nouvelle tentative automatique")
+            scheduleReconnect()
+            return
+        }
         stopScan()
-        disconnect()
-        stream.clear()
+        clearGatt()
         try{
             ui{connection="Connexion…";deviceName=d.name;strength=d.rssi}
             gatt=adapter.getRemoteDevice(d.address).connectGatt(context,false,gattCallback,BluetoothDevice.TRANSPORT_LE)
+                ?: throw IllegalStateException("Impossible d'ouvrir GATT")
             lastSeenId=d.address
             puffLedger=puffStore.load(lastSeenId)
             savedPuffs=Long.MIN_VALUE
@@ -193,26 +236,35 @@ class CentaurixBle(private val context:Context) {
             ui { refreshPuffScreen() }
             prefs.edit().putString("device",lastSeenId).apply()
             say("Connexion à ${d.name}")
-        }catch(e:Exception){say("Connexion impossible : "+e.message)}
-    }
-    fun reconnect(){
-        if(connected)return
-        val address=prefs.getString("device","") ?: ""
-        if(!android.bluetooth.BluetoothAdapter.checkBluetoothAddress(address)) {
-            startScan();return
+        }catch(e:Exception){
+            say("Connexion impossible : "+e.message)
+            clearGatt()
+            scheduleReconnect()
         }
-        connectDevice(FoundDevice(address,"BT200 BOX MOD",-70))
     }
-    fun disconnect() {
-        pollActive=false;stopScan()
+    private fun unexpectedDisconnect(reason:String) {
+        if(gatt==null)return
+        say(reason)
+        clearGatt()
+        scheduleReconnect()
+    }
+    private fun clearGatt() {
+        pollActive=false
         uploadSession++
         cancelUploadState()
         notificationSetup=false
         tx=null;rx=null;stream.clear();txQueue.clear();writeBusy=false;writeEpoch++
         requestedProfile=null;confirmedWriteAck=false;modeActivationQueued=false
-        val old=gatt; gatt=null
+        val old=gatt;gatt=null
         try{old?.disconnect();old?.close()}catch(_:Exception){}
         ui{connected=false;connection="Déconnectée";busy=false;pendingAction=""}
+    }
+    fun disconnect() {
+        retryAllowed=false
+        reconnectFailures=0
+        cancelRetry()
+        stopScan()
+        clearGatt()
     }
     private fun subscribe(g:BluetoothGatt) {
         if(g!==gatt || notificationSetup)return
@@ -221,10 +273,10 @@ class CentaurixBle(private val context:Context) {
             val service=g.getService(Bt200Protocol.SERVICE)
             tx=service?.getCharacteristic(Bt200Protocol.WRITE)
             rx=service?.getCharacteristic(Bt200Protocol.NOTIFY)
-            if(tx==null || rx==null){say("Service FFA0 incomplet : vérifier le firmware");return}
-            if(!g.setCharacteristicNotification(rx,true)){say("Notifications BLE indisponibles");return}
+            if(tx==null || rx==null){unexpectedDisconnect("Service FFA0 incomplet : vérifier le firmware");return}
+            if(!g.setCharacteristicNotification(rx,true)){unexpectedDisconnect("Notifications BLE indisponibles");return}
             val descriptor=rx!!.getDescriptor(Bt200Protocol.CCCD)
-            if(descriptor==null){say("Descripteur de notifications absent");return}
+            if(descriptor==null){unexpectedDisconnect("Descripteur de notifications absent");return}
             val success=if(Build.VERSION.SDK_INT>=33)
                 g.writeDescriptor(descriptor,BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)==BluetoothStatusCodes.SUCCESS
             else{
@@ -234,28 +286,27 @@ class CentaurixBle(private val context:Context) {
                 val yes=g.writeDescriptor(descriptor)
                 yes
             }
-            if(!success) say("Échec de l'abonnement BLE")
-        }catch(e:Exception){say("GATT : "+e.message)}
+            if(!success) unexpectedDisconnect("Échec de l'abonnement BLE")
+        }catch(e:Exception){unexpectedDisconnect("GATT : "+e.message)}
     }
     private fun notificationReady():Boolean = connected
     private val gattCallback=object:BluetoothGattCallback(){
         override fun onConnectionStateChange(g:BluetoothGatt,stat:Int,newState:Int) {
             if(g!==gatt){g.close();return}
             if(stat!=BluetoothGatt.GATT_SUCCESS){
-                say("Connexion perdue (GATT $stat)");disconnect();return
+                unexpectedDisconnect("Connexion perdue (GATT $stat)");return
             }
             if(newState==BluetoothProfile.STATE_CONNECTED){
                 ui{connection="Découverte GATT…"}
                 try{g.discoverServices()}catch(e:Exception){say("Découverte impossible : "+e.message)}
             }else if(newState==BluetoothProfile.STATE_DISCONNECTED){
-                say("BT200 déconnectée")
-                disconnect()
+                unexpectedDisconnect("BT200 déconnectée")
             }
         }
         override fun onServicesDiscovered(g:BluetoothGatt,stat:Int){
             if(g!==gatt)return
-            if(stat!=0){say("Services GATT introuvables ($stat)");return}
-            if(g.getService(Bt200Protocol.SERVICE)==null){say("BT200 : service FFA0 absent");return}
+            if(stat!=0){unexpectedDisconnect("Services GATT introuvables ($stat)");return}
+            if(g.getService(Bt200Protocol.SERVICE)==null){unexpectedDisconnect("BT200 : service FFA0 absent");return}
             ui{connection="Négociation BLE…"}
             try {
                 if(!g.requestMtu(247))subscribe(g)
@@ -271,12 +322,14 @@ class CentaurixBle(private val context:Context) {
         override fun onDescriptorWrite(g:BluetoothGatt,desc:BluetoothGattDescriptor,stat:Int){
             if(g!==gatt)return
             if(stat==0){
+                cancelRetry()
+                reconnectFailures=0
                 ui{connected=true;connection="Connectée";notice="Connectée à la BT200"}
                 pollActive=true
                 enqueue(Bt200Protocol.readStatus())
                 (1..3).forEach { enqueue(Bt200Protocol.readProfile(it));enqueue(Bt200Protocol.readTheme(it)) }
                 schedulePoll()
-            }else say("Abonnement aux notifications refusé ($stat)")
+            }else unexpectedDisconnect("Abonnement aux notifications refusé ($stat)")
         }
         override fun onCharacteristicWrite(g:BluetoothGatt,ch:BluetoothGattCharacteristic,stat:Int){
             if(g!==gatt)return
