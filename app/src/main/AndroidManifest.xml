@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-    <application android:label="Centaurix" android:theme="@android:style/Theme.Material.NoActionBar"
+    <application android:label="Centaurix" android:icon="@drawable/centaurix_launcher" android:roundIcon="@drawable/centaurix_launcher" android:theme="@android:style/Theme.Material.NoActionBar"
         android:allowBackup="false" android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
