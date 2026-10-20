@@ -25,3 +25,11 @@ The BT200 provides cumulative puff counts, not timestamped events. Counts observ
 
 Independent project. Not affiliated with Lost Vape.
 
+
+## Mises à jour intégrées
+
+Les APK sont compilés par GitHub Actions. Dans la section « Plus », le bouton
+« Rechercher une mise à jour » vérifie les versions publiées sur GitHub Releases.
+Une nouvelle version est annoncée en plein écran dans l'application. L'APK est
+vérifié avec SHA-256 avant de passer à l'installateur Android. Une connexion
+Internet et une signature de build compatible sont nécessaires.
