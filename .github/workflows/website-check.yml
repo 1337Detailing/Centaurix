@@ -11,6 +11,7 @@ on:
     paths:
       - 'docs/**'
       - 'tools/render_site_assets.py'
+      - 'tools/check_mobile_layout.mjs'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,17 @@ jobs:
           node-version: '22'
       - name: Validate JavaScript syntax
         run: node --check docs/app.js
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Check responsive layout and horizontal scrolling
+        shell: bash
+        run: |
+          python3 -m http.server 8765 --directory docs >/tmp/centaurix-site.log 2>&1 &
+          SITE_PID=$!
+          trap 'kill "$SITE_PID" 2>/dev/null || true' EXIT
+          node tools/check_mobile_layout.mjs
       - name: Verify all bundled assets
         shell: bash
         run: |

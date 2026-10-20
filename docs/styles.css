@@ -210,3 +210,52 @@ h2>span:not(.text-gradient){color:#8d8691}
   html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
   .reveal{opacity:1;transform:none}
 }
+
+/* Mobile overflow fix: decorative orbits must not enlarge the document viewport.
+   Only the screenshot gallery may scroll sideways within its own container. */
+html {
+  max-width: 100%;
+  overflow-x: hidden; /* fallback for browsers without overflow: clip */
+  overflow-x: clip;
+}
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+main {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+.site-header, .footer {
+  max-width: 100%;
+}
+.hero-grid > *, .showcase-layout > *, .faq-section > *, .download-section > *,
+.section-top > *, .feature-grid > *, .hero-buttons > * {
+  min-width: 0;
+}
+.hero-visual {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  overflow: clip;
+}
+.screenshots-strip {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .hero-grid, .showcase-layout, .faq-section, .download-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nav { min-width: 0; }
+  .brand { min-width: 0; flex: 0 1 auto; }
+  .nav-actions { flex: 0 0 auto; }
+  .eyebrow { max-width: 100%; white-space: normal; flex-wrap: wrap; }
+  .hero-copy, .hero-description, .hero-buttons, .hero-meta { width: 100%; min-width: 0; }
+  .hero-buttons .btn { max-width: 100%; }
+  .device-art { max-width: 100%; }
+}
