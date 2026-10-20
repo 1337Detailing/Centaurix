@@ -1,8 +1,8 @@
-# Centaurix
+# Centaurix 1.0.0-beta2
 
 Independent, offline-first Android companion for the Lost Vape Centaurus BT200. Built in Kotlin + Jetpack Compose + Material 3. Visually inspired by Cloudix: dark glasslike surfaces, soft gold accents, modular cards and five-tab navigation.
 
-## Available in 1.0 beta
+## Available in 1.0 beta 2
 
 - BLE scan, stable GATT connection, notifications and framing, MTU negotiation and read polling.
 - Confirmed hardware path: service FFA0, char FFA1/FFA3, status command 01, reply 81 / CRC in big endian.
@@ -22,3 +22,5 @@ The status read has been confirmed on an actual BT200 by the user (92%/97% batte
 Centaurix never calls any firing command and never modifies firmware/safety limits. Power/profile changes require confirmation and input validation. Do not use beta builds for device firmware updates. Keep the official app available until all features are verified.
 
 Not endorsed by, affiliated with or supported by Lost Vape.
+
+Beta 2 adds a launcher icon and an MTU negotiation fallback for BLE firmwares that omit the callback. Gallery thumbnails are illustrative; no unverified stock theme preview is claimed as exact.
