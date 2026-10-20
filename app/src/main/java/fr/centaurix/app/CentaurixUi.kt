@@ -24,6 +24,11 @@ object CentaurixUi {
     var customHex by mutableStateOf("#D8B65A")
         private set
     var systemDark by mutableStateOf(true)
+    var systemAccentColor by mutableStateOf(Color(0xFFA6B987))
+    var dynamicColors by mutableStateOf(false)
+        private set
+    var surfaceIntensity by mutableStateOf("subtle")
+        private set
 
     fun initialize(context:Context) {
         if(prefs!=null)return
@@ -32,6 +37,8 @@ object CentaurixUi {
         theme=prefs?.getString("theme","system") ?: "system"
         accent=prefs?.getString("accent","gold") ?: "gold"
         customHex=prefs?.getString("customHex","#D8B65A") ?: "#D8B65A"
+        dynamicColors=prefs?.getBoolean("dynamicColors",false) ?: false
+        surfaceIntensity=prefs?.getString("surfaceIntensity","subtle") ?: "subtle"
     }
     fun chooseLanguage(value:String) {
         require(value in listOf("system","fr","en","de","ru","pl"))
@@ -42,8 +49,16 @@ object CentaurixUi {
         theme=value; prefs?.edit()?.putString("theme",value)?.apply()
     }
     fun chooseAccent(value:String) {
-        require(value in listOf("gold","blue","purple","teal","coral","green","custom"))
-        accent=value; prefs?.edit()?.putString("accent",value)?.apply()
+        require(value in listOf("gold","pistachio","blue","purple","teal","coral","green","custom"))
+        accent=value; dynamicColors=false
+        prefs?.edit()?.putString("accent",value)?.putBoolean("dynamicColors",false)?.apply()
+    }
+    fun chooseSurfaceIntensity(value:String) {
+        require(value in listOf("subtle","normal","strong"))
+        surfaceIntensity=value; prefs?.edit()?.putString("surfaceIntensity",value)?.apply()
+    }
+    fun chooseDynamicColors(value:Boolean) {
+        dynamicColors=value; prefs?.edit()?.putBoolean("dynamicColors",value)?.apply()
     }
     fun setCustomHex(value:String):Boolean {
         val h=("#"+value.trim().removePrefix("#")).uppercase(Locale.ROOT)
@@ -73,6 +88,13 @@ object CentaurixUi {
         "Sombre" to listOf("Dark", "Dunkel", "Тёмная", "Ciemny"),
         "Clair" to listOf("Light", "Hell", "Светлая", "Jasny"),
         "Couleur d'accent" to listOf("Accent color", "Akzentfarbe", "Цвет акцента", "Kolor akcentu"),
+        "Thème de l'application" to listOf("App theme", "App-Design", "Тема приложения", "Motyw aplikacji"),
+        "Intensité des surfaces" to listOf("Surface intensity", "Oberflächenintensität", "Насыщенность поверхностей", "Intensywność powierzchni"),
+        "Teinte légère" to listOf("Subtle tint", "Leichte Tönung", "Лёгкий оттенок", "Lekki odcień"),
+        "Normale" to listOf("Normal", "Normal", "Обычный", "Normalna"),
+        "Prononcée" to listOf("Strong", "Kräftig", "Выраженный", "Mocna"),
+        "Pistache" to listOf("Pistachio", "Pistazie", "Фисташковый", "Pistacjowy"),
+        "Material You dynamique" to listOf("Dynamic Material You", "Dynamisches Material You", "Динамический Material You", "Dynamiczny Material You"),
         "Statistiques" to listOf("Statistics", "Statistik", "Статистика", "Statystyki"),
         "Tableau de bord" to listOf("Dashboard", "Übersicht", "Обзор", "Panel"),
         "Profils" to listOf("Profiles", "Profile", "Профили", "Profile"),
@@ -90,7 +112,7 @@ object CentaurixUi {
         "Puissance" to listOf("Power", "Leistung", "Мощность", "Moc"),
         "Température" to listOf("Temperature", "Temperatur", "Температура", "Temperatura"),
         "Tension" to listOf("Voltage", "Spannung", "Напряжение", "Napięcie"),
-        "Réponse Turbo" to listOf("Turbo response", "Turbo-Stufe", "Турбо-отклик", "Tryb Turbo"),
+        "Réponse Power" to listOf("Power response", "Power-Reaktion", "Режим Power", "Reakcja Power"),
         "Relire le profil" to listOf("Reload profile", "Profil neu laden", "Обновить профиль", "Odśwież profil"),
         "Réinitialiser ce profil" to listOf("Reset profile", "Profil zurücksetzen", "Сбросить профиль", "Resetuj profil"),
         "Confirmer" to listOf("Confirm", "Bestätigen", "Подтвердить", "Potwierdź"),
@@ -181,6 +203,7 @@ object CentaurixUi {
     val dark:Boolean get()=when(theme) {"light"->false;"dark","amoled"->true;else->systemDark}
     fun palette():CentaurixPalette {
         val color=when(accent) {
+            "pistachio"->0xFFA6B987L
             "blue"->0xFF5796E5L;"purple"->0xFFAE8CE8L;"teal"->0xFF51B5B7L
             "coral"->0xFFE68C76L;"green"->0xFF7BC9A2L
             "custom"->runCatching { android.graphics.Color.parseColor(customHex).toLong() and 0xFFFFFFFFL }.getOrDefault(0xFFD8B65AL)
@@ -188,12 +211,23 @@ object CentaurixUi {
         }
         val isDark=dark
         val amoled=theme=="amoled"
+        val surface=when {
+            !isDark->when(surfaceIntensity) {
+                "normal"->Color(0xFFF6F4F0); "strong"->Color(0xFFEDE7DA); else->Color.White
+            }
+            amoled->when(surfaceIntensity) {
+                "normal"->Color(0xFF171717); "strong"->Color(0xFF242424); else->Color(0xFF101010)
+            }
+            else->when(surfaceIntensity) {
+                "normal"->Color(0xFF24252A); "strong"->Color(0xFF303038); else->Color(0xFF1F2026)
+            }
+        }
         return CentaurixPalette(
-            primary=Color(color.toInt()),
-            background=if(!isDark)Color(0xFFFAF9F6) else if(amoled)Color.Black else Color(0xFF0B0C11),
-            surface=if(!isDark)Color.White else if(amoled)Color(0xFF101010) else Color(0xFF171920),
-            raised=if(!isDark)Color(0xFFF0EEE9) else if(amoled)Color(0xFF1A1A1A) else Color(0xFF22242D),
-            border=if(!isDark)Color(0xFFDCD8CE) else Color(0xFF30313B),
+            primary=if(dynamicColors && android.os.Build.VERSION.SDK_INT>=31)systemAccentColor else Color(color.toInt()),
+            background=if(!isDark)Color(0xFFFAF9F6) else if(amoled)Color.Black else Color(0xFF0D0E13),
+            surface=surface,
+            raised=if(!isDark)Color(0xFFEDEAE5) else if(amoled)Color(0xFF292929) else Color(0xFF32343A),
+            border=if(!isDark)Color(0xFFDCD8CE) else Color(0xFF373941),
             text=if(!isDark)Color(0xFF1D1F24) else Color(0xFFF8F6FC),
             muted=if(!isDark)Color(0xFF666570) else Color(0xFFA9A7B3),
             success=if(!isDark)Color(0xFF317C55) else Color(0xFF80D5A4),
