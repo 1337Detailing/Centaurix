@@ -1,38 +1,28 @@
-# Centaurix 1.0.0-beta2
+# Centaurix
 
-Independent, offline-first Android companion for the Lost Vape Centaurus BT200. Built in Kotlin + Jetpack Compose + Material 3. Visually inspired by Cloudix: dark glasslike surfaces, soft gold accents, modular cards and five-tab navigation.
+Android companion for the **Lost Vape Centaurus BT200**.
 
-## Available in 1.0 beta 2
+## Features
 
-- BLE scan, stable GATT connection, notifications and framing, MTU negotiation and read polling.
-- Confirmed hardware path: service FFA0, char FFA1/FFA3, status command 01, reply 81 / CRC in big endian.
-- Live dashboard for dual batteries, active watts, active mode/profile and puffs.
-- Read and edit 3 device profiles: Power / Turbo / temperature-control SS316, TI, NI / Voltage / 8-step VPC. Save with confirmation, official reply acknowledgements and refresh. Validate within official app's ranges; no ability to fire remotely.
-- Reset a profile only after confirmation.
-- Read built-in theme metadata, switch 5 manufacturer-provided theme variants. Original-app protocol 08, reply 88.
-- Local image chooser, crop/convert to RGB565 at 240×320 and 90×120. Chunked BLE transfer (30/31/32, B0/B1/B2 acks), progress indicator and MTU check. **Experimental: requires a real hardware transfer test; don't use during critical use.**
-- Offline local history, diagnostics export, reconnect, no account or online telemetry.
+- Bluetooth LE connection and live device status
+- Power, mode and 8-point VPC profile controls with readback verification
+- Automatic daily puff tracking and local history
+- Device themes, previews and custom wallpapers
+- Languages: system, French, English, German, Russian and Polish
+- Appearance: system, light, dark, AMOLED and accent colors
 
-## Test status
+## Build
 
-The status read has been confirmed on an actual BT200 by the user (92%/97% batteries, Power mode, 5 W). Other write commands were recovered from the official Centaurus 1.0.9 APK and passed protocol unit tests. The features are **not yet claimed hardware-tested** until user confirmation on a box. Android CI runs unit tests and creates a debug APK.
+JDK 17 and Android SDK 35 required.
 
-## Safety
+```sh
+gradle :app:testDebugUnitTest :app:assembleDebug
+```
 
-Centaurix never calls any firing command and never modifies firmware/safety limits. Power/profile changes require confirmation and input validation. Do not use beta builds for device firmware updates. Keep the official app available until all features are verified.
+Download debug builds from GitHub Actions **Artifacts**.
 
-Not endorsed by, affiliated with or supported by Lost Vape.
+## Limitations
 
-Beta 2 adds a launcher icon and an MTU negotiation fallback for BLE firmwares that omit the callback. Gallery thumbnails are illustrative; no unverified stock theme preview is claimed as exact.
+The BT200 provides cumulative puff counts, not timestamped events. Counts observed across offline day boundaries cannot be dated precisely. Firmware write commands require on-device verification.
 
-## Beta 4 (écriture et suivi des puffs)
-
-- Alignement du transport Android sur le comportement de l'application officielle Centaurus 1.0.9 : `writeNoResponse` pour FFA1 quand la caractéristique l'annonce ; file séquencée pour éviter les rafales.
-- Correction de l'enregistrement des profils Power : les paramètres inutilisés (tension et boost) peuvent avoir la valeur zéro. Les contrôles sont propres à chaque mode.
-- La commande d'enregistrement Power/Turbo/VPC `0x02` exige désormais un accusé de la box `0x82`, suivi d'une relecture du profil pour afficher un résultat confirmé ; aucun succès n'est supposé à la seule écriture Android.
-- Nouvel onglet **Puffs** : journée en cours, sept derniers jours, 30 jours, graphique et archives mensuelles conservées en local sur le téléphone.
-- Le suivi compare le compteur cumulatif de la box entre les lectures **du même jour**. Le tout premier relevé constitue une référence, pas un historique antérieur. Une période qui traverse minuit sans relevé ne peut pas être répartie précisément par jour : son delta est déclaré non attribué. Les compteurs de la box ne sont jamais remis à zéro par l'application.
-- Tests unitaires du compteur quotidien, coupures, minuit, remises à zéro et des encodages des profils.
-- La lecture Bluetooth est matériellement validée. L'écriture doit être confirmée sur une vraie box ; les réglages restent expérimentaux jusqu'aux journaux de relecture.
-
-Le suivi n'est pas un service BLE permanent lorsque l'app est fermée ou que le système suspend le Bluetooth. Une reconnexion dans la même journée permet de retrouver le delta de compteur ; le suivi à travers plusieurs journées sans connexion est nécessairement incomplet.
+Independent project. Not affiliated with Lost Vape.

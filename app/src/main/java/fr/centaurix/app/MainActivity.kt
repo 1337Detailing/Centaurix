@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
@@ -355,9 +356,7 @@ class MainActivity:ComponentActivity(){
         Spacer(Modifier.height(14.dp))
         GhostButton("Actualiser les données",enabled=ble.connected,onClick=ble::refresh)
     }
-    Spacer(Modifier.height(18.dp))
-    Text(tr("CENTАURIX · CONNECTÉ EN LOCAL · SANS CLOUD"),fontSize=10.sp,color=Muted,letterSpacing=1.2.sp,
-        modifier=Modifier.fillMaxWidth(),textAlign=TextAlign.Center)
+
 }
 @Composable private fun ConnectPrompt(onConnect:()->Unit){
     Panel{
@@ -487,8 +486,7 @@ class MainActivity:ComponentActivity(){
             dismissButton={TextButton(onClick={reset=false}){Text(tr("Annuler"))}})
     }
     Spacer(Modifier.height(12.dp))
-    Text(tr("Les réglages sont envoyés uniquement après confirmation, puis relus après l'accusé de réception du firmware."),
-        color=Muted,fontSize=12.sp,modifier=Modifier.padding(horizontal=5.dp))
+
 }
 @Composable private fun VpcPage(ble:CentaurixBle,onConnect:()->Unit){
     Label("Courbe VPC","BT200")
@@ -511,7 +509,7 @@ class MainActivity:ComponentActivity(){
     }
     Panel{
         Text(tr("Courbe de puissance"),fontWeight=FontWeight.Bold,fontSize=18.sp)
-        Text(tr("Huit points de réglage • 5 à 200 watts"),fontSize=12.sp,color=Muted)
+        Text("5–200 W",fontSize=12.sp)
         Spacer(Modifier.height(22.dp))
         Canvas(Modifier.fillMaxWidth().height(160.dp)){
             val max=200f
@@ -559,42 +557,39 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(14.dp))
     Panel{
         Text(tr("Collections officielles"),fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text(tr("Cinq variantes intégrées • aperçus illustratifs, pouvant différer des vrais visuels."),
-            fontSize=12.sp,color=Muted)
+        Text(tr("Illustration"),fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(16.dp))
         val previews=listOf("Aube","Brume","Nébuleuse","Magma","Minuit")
         var selected by remember(slot){mutableIntStateOf(1)}
         LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)){
             items((1..5).toList()){id->
                 Column(Modifier.width(115.dp)){
-                    val colors=listOf(
-                        listOf(Color(0xFF443126),Color(0xFFEBC07E)),
-                        listOf(Color(0xFF233F50),Color(0xFF76BBD0)),
-                        listOf(Color(0xFF433056),Color(0xFFAF82D3)),
-                        listOf(Color(0xFF5D2E29),Color(0xFFD38158)),
-                        listOf(Color(0xFF222630),Color(0xFF64768F))
-                    )
-                    Box(Modifier.fillMaxWidth().height(156.dp).clip(RoundedCornerShape(18.dp))
-                        .background(Brush.verticalGradient(colors[id-1]))
+                    val sprite=ImageBitmap.imageResource(R.drawable.theme_previews)
+                    Box(Modifier.fillMaxWidth().height(156.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .clickable{selected=id}
-                        .border(if(selected==id)2.dp else 0.dp,
-                            if(selected==id)Gold else Color.Transparent,RoundedCornerShape(18.dp)),
-                        contentAlignment=Alignment.Center){
-                        Icon(Icons.Rounded.Bolt,null,tint=Color.White.copy(alpha=.7f),modifier=Modifier.size(50.dp))
-                        Text(id.toString(),Modifier.align(Alignment.BottomEnd).padding(10.dp),
-                            fontSize=11.sp,color=Color.White)
+                        .border(if(selected==id)2.dp else 1.dp,
+                            if(selected==id)Gold else Line,RoundedCornerShape(18.dp))) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            drawImage(
+                                image=sprite,
+                                srcOffset=IntOffset((id-1)*75,0),
+                                srcSize=IntSize(75,98),
+                                dstSize=IntSize(size.width.toInt().coerceAtLeast(1),
+                                    size.height.toInt().coerceAtLeast(1))
+                            )
+                        }
                     }
                     Spacer(Modifier.height(7.dp))
-                    Text(previews[id-1],fontSize=12.sp,fontWeight=FontWeight.Medium)
+                    Text(tr(previews[id-1]),fontSize=12.sp,fontWeight=FontWeight.Medium)
                 }
             }
         }
         Spacer(Modifier.height(18.dp))
-        GoldButton("Appliquer la variante $selected",Icons.Rounded.Palette,
+        GoldButton(if(CentaurixUi.locale().language=="fr")"Appliquer le thème $selected" else "Apply theme $selected",Icons.Rounded.Palette,
             enabled=!ble.busy){ble.applyTheme(slot,selected)}
         Spacer(Modifier.height(8.dp))
-        Text(tr("La sélection est envoyée au firmware avec accusé de réception."),
-            color=Muted,fontSize=11.sp)
+
     }
     Spacer(Modifier.height(15.dp))
     Panel{
@@ -603,12 +598,11 @@ class MainActivity:ComponentActivity(){
             Spacer(Modifier.width(11.dp))
             Column {
                 Text(tr("Mon propre fond d'écran"),fontSize=17.sp,fontWeight=FontWeight.Bold)
-                Text(tr("Ton image, directement sur la BT200"),color=Muted,fontSize=12.sp)
+
             }
         }
         Spacer(Modifier.height(16.dp))
-        Text(tr("L'image est recadrée automatiquement aux formats 240×320 et 90×120, puis encodée en RGB565."),
-            fontSize=12.sp,color=Muted)
+
         Spacer(Modifier.height(16.dp))
         if(ble.transferOngoing){
             val p by animateFloatAsState(ble.transferProgress,label="upload")
@@ -619,8 +613,7 @@ class MainActivity:ComponentActivity(){
         }else GoldButton("Choisir et transférer une image",Icons.Rounded.UploadFile,
             enabled=!ble.busy && ble.mtu>=213,onClick=onPickImage)
         Spacer(Modifier.height(9.dp))
-        Text(tr("Transfert expérimental : ne coupe pas la connexion pendant l'envoi. MTU : ${ble.mtu}."),
-            color=Muted,fontSize=11.sp)
+
     }
 }
 
@@ -727,8 +720,7 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(15.dp))
     Panel{
         Text(tr("Journal & confidentialité"),fontSize=17.sp,fontWeight=FontWeight.Bold)
-        Text(tr("Aucun compte, aucune télémétrie externe. Les données restent sur ton téléphone."),
-            color=Muted,fontSize=12.sp)
+
         Spacer(Modifier.height(15.dp))
         GhostButton("Partager le diagnostic",Icons.Rounded.Share){
             val intent=Intent(Intent.ACTION_SEND)
@@ -763,10 +755,7 @@ class MainActivity:ComponentActivity(){
             confirmButton={TextButton(onClick={confirm=false;ble.clearHistory()}){Text(tr("Effacer"),color=Danger)}},
             dismissButton={TextButton(onClick={confirm=false}){Text(tr("Annuler"))}})
     }
-    Spacer(Modifier.height(15.dp))
-    Text(tr("CENTAURIX · 1.0 BETA 2\nInspiré du langage visuel Cloudix\nProjet indépendant, non affilié à Lost Vape"),
-        textAlign=TextAlign.Center,color=Muted,fontSize=11.sp,lineHeight=18.sp,
-        modifier=Modifier.fillMaxWidth())
+
 }
 
 @Composable private fun PuffsPage(ble:CentaurixBle,currentDate:LocalDate) {
@@ -811,8 +800,7 @@ class MainActivity:ComponentActivity(){
     Spacer(Modifier.height(15.dp))
     Panel {
         Text(tr("Cette semaine"),fontSize=18.sp,fontWeight=FontWeight.Bold)
-        Text(tr("Bouffées enregistrées par date • touche une barre pour voir le détail."),
-            color=Muted,fontSize=12.sp)
+
         Spacer(Modifier.height(25.dp))
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),
             verticalAlignment=Alignment.Bottom){
@@ -883,21 +871,15 @@ class MainActivity:ComponentActivity(){
     Panel {
         Icon(Icons.Rounded.Info,null,tint=Gold,modifier=Modifier.size(22.dp))
         Spacer(Modifier.height(10.dp))
-        Text(tr("Comment fonctionne le suivi ?"),fontSize=16.sp,fontWeight=FontWeight.Bold)
-        Spacer(Modifier.height(7.dp))
-        Text("La BT200 fournit un compteur cumulatif, pas l'heure de chaque bouffée. " +
-            "Centaurix calcule les augmentations entre deux lectures effectuées le même jour, " +
-            "y compris après une reconnexion. La première lecture crée une référence.",
-            fontSize=12.sp,color=Muted,lineHeight=19.sp)
-        if(ble.missingDayPuffs>0) {
-            Spacer(Modifier.height(9.dp))
-            Text(tr("${ble.missingDayPuffs} bouffées non attribuées : relevées entre deux journées différentes."),
+        Text(if(CentaurixUi.locale().language=="fr")
+            "Classement automatique par date."
+            else "Automatically grouped by local date.",
+            fontSize=12.sp,color=Muted)
+        if(ble.missingDayPuffs>0L){
+            Spacer(Modifier.height(8.dp))
+            Text("${ble.missingDayPuffs} puffs without a reliable date.",
                 fontSize=12.sp,color=GoldLight)
         }
-        Spacer(Modifier.height(7.dp))
-        Text("Sans connexion autour de minuit, le suivi quotidien peut être incomplet. " +
-            "Aucune bouffée n'est inventée. Données stockées localement sur ce téléphone.",
-            fontSize=12.sp,color=Muted,lineHeight=19.sp)
         Spacer(Modifier.height(13.dp))
         var wipe by remember { mutableStateOf(false) }
         GhostButton("Effacer les statistiques locales",Icons.Rounded.DeleteSweep){
