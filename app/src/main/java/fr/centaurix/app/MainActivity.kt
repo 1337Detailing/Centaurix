@@ -463,7 +463,7 @@ class MainActivity:ComponentActivity(){
                 if(i==0)path.moveTo(x,y) else path.lineTo(x,y)
             }
             drawPath(path,Gold,style=androidx.compose.ui.graphics.drawscope.Stroke(width=4.dp.toPx(),
-                cap=StrokeCap.Round,join=PathJoin.Round))
+                cap=StrokeCap.Round,join=StrokeJoin.Round))
             points.forEachIndexed{i,v->drawCircle(GoldLight,5.dp.toPx(),
                 Offset(i*gap,size.height-(v/max*size.height)))}
         }
