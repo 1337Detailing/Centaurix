@@ -26,12 +26,11 @@ docs/
 
 ## Deploy to GitHub Pages
 
-1. Open **Settings → Pages** in the repository.
-2. Set **Build and deployment → Deploy from a branch**.
-3. Select branch **main**, folder **/docs**, and save.
-4. The site appears at **https://1337detailing.github.io/Centaurix/** after GitHub completes deployment.
+The website is published automatically from `docs/` by `.github/workflows/pages.yml` when its files change. GitHub Pages must use **GitHub Actions** as the build source (already configured for this repository).
 
-Assets use relative URLs, so the site works from a project subdirectory or from a local static server.
+Live website: **https://1337detailing.github.io/Centaurix/**
+
+The landing page, download messages, SEO metadata and generated device mockups are in English. Assets use relative URLs and also work from a local static server.
 
 ## GitHub downloads
 
