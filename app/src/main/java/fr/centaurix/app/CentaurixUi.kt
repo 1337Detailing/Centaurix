@@ -163,9 +163,9 @@ object CentaurixUi {
         val position=when(code){"de"->1;"ru"->2;"pl"->3;else->0}
         val known=strings[key] ?: additionalStrings[key]
         if(known!=null)return known[position]
-        val count=Regex("^(\\\\d+) bouffées$").matchEntire(key)
+        val count=Regex("""^(\d+) bouffées$""").matchEntire(key)
         if(count!=null)return count.groupValues[1]+" "+(strings["Bouffées"]?.get(position) ?: "puffs")
-        val profile=Regex("^Profil (\\\\d+)$").matchEntire(key)
+        val profile=Regex("""^Profil (\d+)$""").matchEntire(key)
         if(profile!=null)return (additionalStrings["Profil"]?.get(position) ?: "Profile")+" "+profile.groupValues[1]
         return key
     }
