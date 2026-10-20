@@ -87,7 +87,7 @@ class MainActivity:ComponentActivity(){
         val imagePicker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri->
             if(uri!=null)ble.upload(uri)
         }
-        val headerTitles=listOf("Accueil","Profils","VPC","Thèmes","Plus")
+        val headerTitles=listOf("Accueil","Profils","VPC","Puffs","Thèmes","Plus")
         Scaffold(
             containerColor=Back,
             topBar={
@@ -120,13 +120,14 @@ class MainActivity:ComponentActivity(){
                         Triple("Accueil",Icons.Rounded.Home,0),
                         Triple("Profils",Icons.Rounded.Tune,1),
                         Triple("VPC",Icons.Rounded.ShowChart,2),
-                        Triple("Thèmes",Icons.Rounded.Palette,3),
-                        Triple("Plus",Icons.Rounded.MoreHoriz,4)
+                        Triple("Puffs",Icons.Rounded.BarChart,3),
+                        Triple("Thèmes",Icons.Rounded.Palette,4),
+                        Triple("Plus",Icons.Rounded.MoreHoriz,5)
                     )
                     tabs.forEach{(label,icon,index)->
                         NavigationBarItem(selected=page==index,onClick={page=index},
-                            icon={Icon(icon,label,modifier=Modifier.size(23.dp))},
-                            label={Text(label,fontSize=10.sp,maxLines=1)},
+                            icon={Icon(icon,label,modifier=Modifier.size(20.dp))},
+                            label={Text(label,fontSize=9.sp,maxLines=1)},
                             colors=NavigationBarItemDefaults.colors(
                                 selectedIconColor=Gold,selectedTextColor=Gold,
                                 unselectedIconColor=Muted,unselectedTextColor=Muted,
@@ -144,10 +145,11 @@ class MainActivity:ComponentActivity(){
                     Column {
                         Spacer(Modifier.height(8.dp))
                         when(tab){
-                            0 -> HomePage(ble,onConnect={chooseDevice()},onProfiles={page=1},onThemes={page=3})
+                            0 -> HomePage(ble,onConnect={chooseDevice()},onProfiles={page=1},onThemes={page=4},onPuffs={page=3})
                             1 -> ProfilesPage(ble,onConnect={chooseDevice()})
                             2 -> VpcPage(ble,onConnect={chooseDevice()})
-                            3 -> ThemesPage(ble,onPickImage={imagePicker.launch("image/*")},onConnect={chooseDevice()})
+                            3 -> PuffsPage(ble)
+                            4 -> ThemesPage(ble,onPickImage={imagePicker.launch("image/*")},onConnect={chooseDevice()})
                             else -> MorePage(ble,onConnect={chooseDevice()})
                         }
                         Spacer(Modifier.height(20.dp))
@@ -260,7 +262,7 @@ class MainActivity:ComponentActivity(){
             color=Gold,trackColor=Raised)
     }
 }
-@Composable private fun HomePage(ble:CentaurixBle,onConnect:()->Unit,onProfiles:()->Unit,onThemes:()->Unit){
+@Composable private fun HomePage(ble:CentaurixBle,onConnect:()->Unit,onProfiles:()->Unit,onThemes:()->Unit,onPuffs:()->Unit){
     Label("Ta box, autrement.","TABLEAU DE BORD")
     Hero(ble)
     Spacer(Modifier.height(14.dp))
@@ -290,6 +292,18 @@ class MainActivity:ComponentActivity(){
             Row {
                 Micro("Temps brut","${ble.status?.useTime?:0}",modifier=Modifier.weight(1f))
                 Micro("Profil actif","${ble.status?.slot ?: "—"} / 3",modifier=Modifier.weight(1f))
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Surface(onClick=onPuffs,color=Card,shape=ShapeCard,modifier=Modifier.fillMaxWidth(),border=BorderStroke(1.dp,Line)){
+            Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
+                Icon(Icons.Rounded.BarChart,null,tint=Gold,modifier=Modifier.size(25.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)){
+                    Text("Bouffées aujourd'hui",color=Muted,fontSize=12.sp)
+                    Text("${ble.todayPuffs} mesurées",fontSize=20.sp,fontWeight=FontWeight.Bold)
+                }
+                Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
             }
         }
         Spacer(Modifier.height(14.dp))
@@ -598,8 +612,8 @@ class MainActivity:ComponentActivity(){
     }
     Spacer(Modifier.height(15.dp))
     Panel {
-        Text("Historique local",fontWeight=FontWeight.Bold,fontSize=17.sp)
-        Text("Dernières valeurs lues depuis la box",fontSize=12.sp,color=Muted)
+        Text("Diagnostics : lectures du compteur",fontWeight=FontWeight.Bold,fontSize=17.sp)
+        Text("Valeurs cumulatives brutes (pas les puffs de chaque jour). Voir Puffs pour le suivi quotidien.",fontSize=12.sp,color=Muted)
         Spacer(Modifier.height(12.dp))
         ble.history.takeLast(8).reversed().forEach{p->
             Row(Modifier.fillMaxWidth().padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
@@ -624,6 +638,149 @@ class MainActivity:ComponentActivity(){
         textAlign=TextAlign.Center,color=Muted,fontSize=11.sp,lineHeight=18.sp,
         modifier=Modifier.fillMaxWidth())
 }
+
+@Composable private fun PuffsPage(ble:CentaurixBle) {
+    Label("Chaque jour compte.","SUIVI DES BOUFFÉES")
+    val now=java.time.LocalDate.now()
+    val days=ble.puffDays.toList()
+    val map=days.associateBy { it.date }
+    val today=map[now.toString()]
+    val last7=(6L downTo 0L).map { now.minusDays(it).toString() }
+    val total7=last7.sumOf { map[it]?.puffs ?: 0L }
+    val last30=(29L downTo 0L).map { now.minusDays(it).toString() }
+    val total30=last30.sumOf { map[it]?.puffs ?: 0L }
+    val formatter=java.time.format.DateTimeFormatter.ofPattern("EEE",Locale.FRANCE)
+    val max7=last7.maxOfOrNull { map[it]?.puffs ?: 0L }?.coerceAtLeast(1L) ?: 1L
+    var selectedDay by remember { mutableStateOf(now.toString()) }
+    var monthOffset by remember { mutableIntStateOf(0) }
+    val month=java.time.YearMonth.from(now).plusMonths(monthOffset.toLong())
+
+    Panel {
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){
+                Text("AUJOURD'HUI",fontSize=11.sp,letterSpacing=1.6.sp,color=Gold)
+                Spacer(Modifier.height(6.dp))
+                Text(ble.todayPuffs.toString(),fontSize=69.sp,fontWeight=FontWeight.Light,
+                    letterSpacing=(-2).sp,lineHeight=72.sp)
+                Text("bouffées observées",color=Muted,fontSize=13.sp)
+            }
+            Surface(shape=RoundedCornerShape(22.dp),color=Gold.copy(alpha=.12f)){
+                Icon(Icons.Rounded.ShowChart,null,tint=Gold,
+                    modifier=Modifier.padding(18.dp).size(35.dp))
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        HorizontalDivider(color=Line)
+        Spacer(Modifier.height(17.dp))
+        Row{
+            Micro("7 jours","$total7",Gold,Modifier.weight(1f))
+            Micro("30 jours","$total30",TextMain,Modifier.weight(1f))
+            Micro("Box (total)","${ble.status?.puffs ?: ble.devicePuffCounter}",TextMain,Modifier.weight(1f))
+        }
+    }
+    Spacer(Modifier.height(15.dp))
+    Panel {
+        Text("Cette semaine",fontSize=18.sp,fontWeight=FontWeight.Bold)
+        Text("Bouffées enregistrées par date • touche une barre pour voir le détail.",
+            color=Muted,fontSize=12.sp)
+        Spacer(Modifier.height(25.dp))
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),
+            verticalAlignment=Alignment.Bottom){
+            last7.forEach { iso->
+                val day=map[iso]
+                val value=day?.puffs ?: 0L
+                val isSelected=selectedDay==iso
+                val norm=(value.toFloat()/max7).coerceIn(0f,1f)
+                Column(Modifier.weight(1f).clickable{selectedDay=iso},
+                    horizontalAlignment=Alignment.CenterHorizontally){
+                    Text(if(day!=null)value.toString() else "—",
+                        color=if(isSelected)GoldLight else Muted,fontSize=11.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Box(Modifier.fillMaxWidth().height(138.dp),contentAlignment=Alignment.BottomCenter){
+                        Box(Modifier.fillMaxWidth(.65f)
+                            .fillMaxHeight(if(day!=null) (.08f+.92f*norm) else .025f)
+                            .clip(RoundedCornerShape(topStart=7.dp,topEnd=7.dp))
+                            .background(if(isSelected)Gold else if(day==null)Line else Gold.copy(alpha=.48f)))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(java.time.LocalDate.parse(iso).format(formatter).take(3),
+                        fontSize=10.sp,color=if(isSelected)Gold else Muted)
+                }
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        val selected=map[selectedDay]
+        Surface(color=Raised,shape=RoundedCornerShape(13.dp),modifier=Modifier.fillMaxWidth()){
+            Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
+                Text(java.time.LocalDate.parse(selectedDay).format(
+                    java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy",Locale.FRANCE)),
+                    color=Muted,fontSize=12.sp,modifier=Modifier.weight(1f))
+                Text(if(selected!=null)"${selected.puffs} puffs" else "Pas de mesure",
+                    color=GoldLight,fontSize=14.sp,fontWeight=FontWeight.Bold)
+            }
+        }
+    }
+    Spacer(Modifier.height(15.dp))
+    Panel {
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Text("Historique quotidien",fontSize=18.sp,fontWeight=FontWeight.Bold,
+                modifier=Modifier.weight(1f))
+            IconButton(onClick={monthOffset--}){Icon(Icons.Rounded.ChevronLeft,null,tint=Gold)}
+            Text(month.format(java.time.format.DateTimeFormatter.ofPattern("MMM yy",Locale.FRANCE)),
+                fontSize=12.sp,color=GoldLight)
+            IconButton(onClick={if(monthOffset<0)monthOffset++},enabled=monthOffset<0){
+                Icon(Icons.Rounded.ChevronRight,null,tint=Gold)
+            }
+        }
+        val monthDays=days.filter {it.date.startsWith(month.toString())}.sortedByDescending{it.date}
+        if(monthDays.isEmpty()){
+            Text("Aucune lecture enregistrée ce mois-là.",color=Muted,fontSize=13.sp,
+                modifier=Modifier.padding(vertical=17.dp))
+        } else {
+            monthDays.forEach {day->
+                Row(Modifier.fillMaxWidth().padding(vertical=11.dp),
+                    verticalAlignment=Alignment.CenterVertically){
+                    Text(java.time.LocalDate.parse(day.date).format(
+                        java.time.format.DateTimeFormatter.ofPattern("EEE dd MMM",Locale.FRANCE)),
+                        color=Muted,fontSize=13.sp,modifier=Modifier.weight(1f))
+                    Text("${day.puffs} bouffées",fontSize=14.sp,fontWeight=FontWeight.SemiBold)
+                }
+                HorizontalDivider(color=Line.copy(alpha=.55f))
+            }
+        }
+    }
+    Spacer(Modifier.height(14.dp))
+    Panel {
+        Icon(Icons.Rounded.Info,null,tint=Gold,modifier=Modifier.size(22.dp))
+        Spacer(Modifier.height(10.dp))
+        Text("Comment fonctionne le suivi ?",fontSize=16.sp,fontWeight=FontWeight.Bold)
+        Spacer(Modifier.height(7.dp))
+        Text("La BT200 fournit un compteur cumulatif, pas l'heure de chaque bouffée. " +
+            "Centaurix calcule les augmentations entre deux lectures effectuées le même jour, " +
+            "y compris après une reconnexion. La première lecture crée une référence.",
+            fontSize=12.sp,color=Muted,lineHeight=19.sp)
+        if(ble.missingDayPuffs>0) {
+            Spacer(Modifier.height(9.dp))
+            Text("${ble.missingDayPuffs} bouffées non attribuées : relevées entre deux journées différentes.",
+                fontSize=12.sp,color=GoldLight)
+        }
+        Spacer(Modifier.height(7.dp))
+        Text("Sans connexion autour de minuit, le suivi quotidien peut être incomplet. " +
+            "Aucune bouffée n'est inventée. Données stockées localement sur ce téléphone.",
+            fontSize=12.sp,color=Muted,lineHeight=19.sp)
+        Spacer(Modifier.height(13.dp))
+        var wipe by remember { mutableStateOf(false) }
+        GhostButton("Effacer les statistiques locales",Icons.Rounded.DeleteSweep){
+            wipe=true
+        }
+        if(wipe)AlertDialog(onDismissRequest={wipe=false},
+            title={Text("Supprimer le suivi ?")},
+            text={Text("Les relevés journaliers locaux seront supprimés. Le compteur de la BT200 ne sera pas modifié.")},
+            confirmButton={TextButton(onClick={wipe=false;ble.clearPuffTracking()}){Text("Supprimer",color=Danger)}},
+            dismissButton={TextButton(onClick={wipe=false}){Text("Annuler")}})
+    }
+}
+
 @Composable private fun DeviceDialog(ble:CentaurixBle,onClose:()->Unit,onSelect:(FoundDevice)->Unit){
     Dialog(onDismissRequest={ble.stopScan();onClose()}){
         Surface(shape=RoundedCornerShape(27.dp),color=Card,border=BorderStroke(1.dp,Line),
