@@ -1,0 +1,147 @@
+package fr.centaurix.app
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import java.util.Locale
+
+data class CentaurixPalette(
+    val primary:Color, val background:Color, val surface:Color, val raised:Color,
+    val border:Color, val text:Color, val muted:Color, val success:Color, val error:Color
+)
+
+object CentaurixUi {
+    private var prefs:SharedPreferences?=null
+    var language by mutableStateOf("system")
+        private set
+    var theme by mutableStateOf("system")
+        private set
+    var accent by mutableStateOf("gold")
+        private set
+    var customHex by mutableStateOf("#D8B65A")
+        private set
+    var systemDark by mutableStateOf(true)
+
+    fun initialize(context:Context) {
+        if(prefs!=null)return
+        prefs=context.getSharedPreferences("centaurix-ui-v1",Context.MODE_PRIVATE)
+        language=prefs?.getString("language","system") ?: "system"
+        theme=prefs?.getString("theme","system") ?: "system"
+        accent=prefs?.getString("accent","gold") ?: "gold"
+        customHex=prefs?.getString("customHex","#D8B65A") ?: "#D8B65A"
+    }
+    fun setLanguage(value:String) {
+        require(value in listOf("system","fr","en","de","ru","pl"))
+        language=value; prefs?.edit()?.putString("language",value)?.apply()
+    }
+    fun setTheme(value:String) {
+        require(value in listOf("system","dark","light","amoled"))
+        theme=value; prefs?.edit()?.putString("theme",value)?.apply()
+    }
+    fun setAccent(value:String) {
+        require(value in listOf("gold","blue","purple","teal","coral","green","custom"))
+        accent=value; prefs?.edit()?.putString("accent",value)?.apply()
+    }
+    fun setCustomHex(value:String):Boolean {
+        val h=("#"+value.trim().removePrefix("#")).uppercase(Locale.ROOT)
+        if(!Regex("^#[0-9A-F]{6}$").matches(h))return false
+        customHex=h
+        prefs?.edit()?.putString("customHex",h)?.apply()
+        setAccent("custom")
+        return true
+    }
+    private fun code()=if(language=="system")Locale.getDefault().language else language
+    fun locale():Locale=when(code()) {
+        "fr"->Locale.FRENCH; "de"->Locale.GERMAN;"ru"->Locale("ru");"pl"->Locale("pl");else->Locale.ENGLISH
+    }
+    private val strings=mapOf(
+        "Accueil" to listOf("Home", "Start", "Главная", "Start"),
+        "Profils" to listOf("Profiles", "Profile", "Профили", "Profile"),
+        "Thèmes" to listOf("Themes", "Designs", "Темы", "Motywy"),
+        "Bouffées" to listOf("Puffs", "Züge", "Затяжки", "Zaciągnięcia"),
+        "Plus" to listOf("More", "Mehr", "Ещё", "Więcej"),
+        "Connecter" to listOf("Connect", "Verbinden", "Подключить", "Połącz"),
+        "Connectée" to listOf("Connected", "Verbunden", "Подключено", "Połączono"),
+        "Réglages" to listOf("Settings", "Einstellungen", "Настройки", "Ustawienia"),
+        "Langue" to listOf("Language", "Sprache", "Язык", "Język"),
+        "Automatique" to listOf("System", "System", "Система", "System"),
+        "Apparence" to listOf("Appearance", "Darstellung", "Оформление", "Wygląd"),
+        "Système" to listOf("System", "System", "Система", "System"),
+        "Sombre" to listOf("Dark", "Dunkel", "Тёмная", "Ciemny"),
+        "Clair" to listOf("Light", "Hell", "Светлая", "Jasny"),
+        "Couleur d'accent" to listOf("Accent color", "Akzentfarbe", "Цвет акцента", "Kolor akcentu"),
+        "Statistiques" to listOf("Statistics", "Statistik", "Статистика", "Statystyki"),
+        "Tableau de bord" to listOf("Dashboard", "Übersicht", "Обзор", "Panel"),
+        "Profils" to listOf("Profiles", "Profile", "Профили", "Profile"),
+        "Courbe VPC" to listOf("VPC curve", "VPC-Kurve", "Кривая VPC", "Krzywa VPC"),
+        "Thèmes de la box" to listOf("Device themes", "Gerätethemen", "Темы устройства", "Motywy urządzenia"),
+        "Aujourd'hui" to listOf("Today", "Heute", "Сегодня", "Dzisiaj"),
+        "AUJOURD'HUI" to listOf("TODAY", "HEUTE", "СЕГОДНЯ", "DZISIAJ"),
+        "7 jours" to listOf("7 days", "7 Tage", "7 дней", "7 dni"),
+        "30 jours" to listOf("30 days", "30 Tage", "30 дней", "30 dni"),
+        "Cette semaine" to listOf("This week", "Diese Woche", "Эта неделя", "Ten tydzień"),
+        "Historique quotidien" to listOf("Daily history", "Tagesverlauf", "История по дням", "Historia dzienna"),
+        "Bouffées aujourd'hui" to listOf("Puffs today", "Züge heute", "Затяжки сегодня", "Dziś zaciągnięć"),
+        "Aucune activité" to listOf("No activity", "Keine Aktivität", "Нет активности", "Brak aktywności"),
+        "Mode" to listOf("Mode", "Modus", "Режим", "Tryb"),
+        "Puissance" to listOf("Power", "Leistung", "Мощность", "Moc"),
+        "Température" to listOf("Temperature", "Temperatur", "Температура", "Temperatura"),
+        "Tension" to listOf("Voltage", "Spannung", "Напряжение", "Napięcie"),
+        "Réponse Turbo" to listOf("Turbo response", "Turbo-Stufe", "Турбо-отклик", "Tryb Turbo"),
+        "Relire le profil" to listOf("Reload profile", "Profil neu laden", "Обновить профиль", "Odśwież profil"),
+        "Réinitialiser ce profil" to listOf("Reset profile", "Profil zurücksetzen", "Сбросить профиль", "Resetuj profil"),
+        "Confirmer" to listOf("Confirm", "Bestätigen", "Подтвердить", "Potwierdź"),
+        "Annuler" to listOf("Cancel", "Abbrechen", "Отмена", "Anuluj"),
+        "Enregistrer" to listOf("Save", "Speichern", "Сохранить", "Zapisz"),
+        "Enregistrer la courbe VPC" to listOf("Save VPC curve", "VPC-Kurve speichern", "Сохранить кривую VPC", "Zapisz krzywą VPC"),
+        "Envoyer le profil sur la box" to listOf("Save profile", "Profil speichern", "Сохранить профиль", "Zapisz profil"),
+        "Courbe de puissance" to listOf("Power curve", "Leistungskurve", "Кривая мощности", "Krzywa mocy"),
+        "Synchroniser la box" to listOf("Sync device", "Gerät synchronisieren", "Синхронизировать", "Synchronizuj"),
+        "Reconnecter" to listOf("Reconnect", "Neu verbinden", "Переподключить", "Połącz ponownie"),
+        "Déconnecter" to listOf("Disconnect", "Trennen", "Отключить", "Rozłącz"),
+        "Effacer l'historique local" to listOf("Clear history", "Verlauf löschen", "Очистить историю", "Wyczyść historię"),
+        "Effacer les statistiques locales" to listOf("Clear statistics", "Statistik löschen", "Удалить статистику", "Wyczyść statystyki"),
+        "Partager le diagnostic" to listOf("Share diagnostics", "Diagnose teilen", "Отправить диагностику", "Udostępnij diagnostykę"),
+        "Illustration" to listOf("Illustrative preview", "Beispielbild", "Пример оформления", "Podgląd poglądowy"),
+        "Mon propre fond d'écran" to listOf("Custom wallpaper", "Eigenes Hintergrundbild", "Свои обои", "Własna tapeta"),
+        "Choisir et transférer une image" to listOf("Upload image", "Bild hochladen", "Загрузить изображение", "Prześlij obraz"),
+        "Autonomie" to listOf("Battery", "Akku", "Батарея", "Bateria"),
+        "En un coup d'œil" to listOf("Overview", "Übersicht", "Обзор", "Przegląd"),
+        "Actualiser les données" to listOf("Refresh", "Aktualisieren", "Обновить", "Odśwież"),
+        "Puissance & modes" to listOf("Power & modes", "Leistung & Modi", "Мощность и режимы", "Moc i tryby"),
+        "Personnalisation" to listOf("Customization", "Anpassung", "Настройка", "Personalizacja"),
+        "Journal & confidentialité" to listOf("Diagnostics", "Diagnose", "Диагностика", "Diagnostyka"),
+        "Historique local" to listOf("Local history", "Lokaler Verlauf", "Локальная история", "Historia lokalna")
+    )
+    fun text(key:String):String {
+        val code=code()
+        if(code=="fr")return key
+        val position=when(code){"de"->1;"ru"->2;"pl"->3;else->0}
+        return strings[key]?.get(position) ?: key
+    }
+    val dark:Boolean get()=when(theme) {"light"->false;"dark","amoled"->true;else->systemDark}
+    fun palette():CentaurixPalette {
+        val color=when(accent) {
+            "blue"->0xFF5796E5L;"purple"->0xFFAE8CE8L;"teal"->0xFF51B5B7L
+            "coral"->0xFFE68C76L;"green"->0xFF7BC9A2L
+            "custom"->runCatching { android.graphics.Color.parseColor(customHex).toLong() and 0xFFFFFFFFL }.getOrDefault(0xFFD8B65AL)
+            else->0xFFD8B65AL
+        }
+        val isDark=dark
+        val amoled=theme=="amoled"
+        return CentaurixPalette(
+            primary=Color(color),
+            background=if(!isDark)Color(0xFFFAF9F6) else if(amoled)Color.Black else Color(0xFF0B0C11),
+            surface=if(!isDark)Color.White else if(amoled)Color(0xFF101010) else Color(0xFF171920),
+            raised=if(!isDark)Color(0xFFF0EEE9) else if(amoled)Color(0xFF1A1A1A) else Color(0xFF22242D),
+            border=if(!isDark)Color(0xFFDCD8CE) else Color(0xFF30313B),
+            text=if(!isDark)Color(0xFF1D1F24) else Color(0xFFF8F6FC),
+            muted=if(!isDark)Color(0xFF666570) else Color(0xFFA9A7B3),
+            success=if(!isDark)Color(0xFF317C55) else Color(0xFF80D5A4),
+            error=if(!isDark)Color(0xFFAD413B) else Color(0xFFF29B91)
+        )
+    }
+}
