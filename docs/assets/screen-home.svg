@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="790" viewBox="0 0 360 790">
+<defs><linearGradient id="bg" x2=".9" y2="1"><stop stop-color="#16131b"/><stop offset="1" stop-color="#09090d"/></linearGradient><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#ffe39e"/><stop offset=".5" stop-color="#ffc268"/><stop offset="1" stop-color="#e58842"/></linearGradient><linearGradient id="panel" x1=".5" x2=".5" y2="1"><stop stop-color="#2a222a"/><stop offset="1" stop-color="#171319"/></linearGradient></defs>
+<rect x="3" y="3" width="354" height="784" rx="44" fill="#07080c" stroke="#585058" stroke-width="5"/>
+<rect x="11" y="11" width="338" height="768" rx="37" fill="url(#bg)"/>
+<rect x="116" y="10" width="129" height="19" rx="10" fill="#030304"/>
+<text x="30" y="48" fill="#ebe4eb" font-family="Arial, sans-serif" font-size="14" font-weight="600" >9:41</text>
+<text x="180" y="93" fill="#f6eef5" font-family="Arial, sans-serif" font-size="21" font-weight="800" text-anchor="middle" letter-spacing="2">CENTAURIX</text>
+<circle cx="39" cy="90" r="19" fill="#3a2523" stroke="#f9b04f"/>
+<path d="m35 76-7 16h11l-4 14 15-22H39l4-8z" fill="#ffcb69"/>
+<rect x="22" y="124" width="316" height="268" rx="20" fill="url(#panel)" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="155" fill="#f6f1f4" font-family="Arial, sans-serif" font-size="19" font-weight="700" >BT200</text>
+<text x="292" y="156" fill="#71dea0" font-family="Arial, sans-serif" font-size="11" font-weight="600" text-anchor="end">● CONNECTÉ</text>
+<text x="45" y="212" fill="#ac9dab" font-family="Arial, sans-serif" font-size="12" font-weight="600" >PUISSANCE</text>
+<text x="46" y="296" fill="#ffe193" font-family="Arial, sans-serif" font-size="80" font-weight="800" >80</text><text x="157" y="294" fill="#ffb25d" font-family="Arial, sans-serif" font-size="31" font-weight="700" >W</text>
+<text x="46" y="346" fill="#a9a4ae" font-family="Arial, sans-serif" font-size="15" font-weight="500" >PROFIL 1 · POWER</text>
+<rect x="49" y="365" width="262" height="7" rx="4" fill="#49414a"/><rect x="49" y="365" width="169" height="7" rx="4" fill="#ffc56c"/><circle cx="217" cy="368" r="9" fill="#ffe1a0"/>
+<rect x="22" y="414" width="148" height="110" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/><rect x="187" y="414" width="151" height="110" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="447" fill="#a5a0aa" font-family="Arial, sans-serif" font-size="12" font-weight="500" >ACCU 01</text><text x="43" y="493" fill="#f7f2fa" font-family="Arial, sans-serif" font-size="31" font-weight="700" >92 %</text>
+<text x="210" y="447" fill="#a5a0aa" font-family="Arial, sans-serif" font-size="12" font-weight="500" >ACCU 02</text><text x="210" y="493" fill="#f7f2fa" font-family="Arial, sans-serif" font-size="31" font-weight="700" >97 %</text>
+<rect x="22" y="543" width="316" height="136" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="575" fill="#afa3ae" font-family="Arial, sans-serif" font-size="13" font-weight="600" >BOUFFÉES AUJOURD'HUI</text>
+<text x="44" y="642" fill="#ffc56a" font-family="Arial, sans-serif" font-size="53" font-weight="700" >127</text>
+<text x="180" y="639" fill="#d4c3c9" font-family="Arial, sans-serif" font-size="16" font-weight="500" >bouffées</text>
+<rect x="18" y="698" width="324" height="64" rx="20" fill="#111117" stroke="#37313c" stroke-width="1.3"/>
+<text x="59" y="737" fill="#ffbf70" font-family="Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Accueil</text><circle cx="59" cy="714" r="3" fill="#ffca73"/><text x="140" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">Puffs</text><text x="221" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">VPC</text><text x="302" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">Thèmes</text>
+<rect x="124" y="769" width="112" height="5" rx="3" fill="#d8d4db"/>
+</svg>

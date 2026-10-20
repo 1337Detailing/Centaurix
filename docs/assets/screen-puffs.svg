@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="790" viewBox="0 0 360 790">
+<defs><linearGradient id="bg" x2=".9" y2="1"><stop stop-color="#16131b"/><stop offset="1" stop-color="#09090d"/></linearGradient><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#ffe39e"/><stop offset=".5" stop-color="#ffc268"/><stop offset="1" stop-color="#e58842"/></linearGradient><linearGradient id="panel" x1=".5" x2=".5" y2="1"><stop stop-color="#2a222a"/><stop offset="1" stop-color="#171319"/></linearGradient></defs>
+<rect x="3" y="3" width="354" height="784" rx="44" fill="#07080c" stroke="#585058" stroke-width="5"/>
+<rect x="11" y="11" width="338" height="768" rx="37" fill="url(#bg)"/>
+<rect x="116" y="10" width="129" height="19" rx="10" fill="#030304"/>
+<text x="30" y="48" fill="#ebe4eb" font-family="Arial, sans-serif" font-size="14" font-weight="600" >9:41</text>
+<text x="180" y="93" fill="#f6eef5" font-family="Arial, sans-serif" font-size="21" font-weight="800" text-anchor="middle" letter-spacing="2">CENTAURIX</text>
+<circle cx="39" cy="90" r="19" fill="#3a2523" stroke="#f9b04f"/>
+<path d="m35 76-7 16h11l-4 14 15-22H39l4-8z" fill="#ffcb69"/>
+<text x="23" y="148" fill="#ffb26d" font-family="Arial, sans-serif" font-size="12" font-weight="700" >STATISTIQUES</text>
+<rect x="22" y="165" width="316" height="181" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="202" fill="#bbb0bc" font-family="Arial, sans-serif" font-size="12" font-weight="700" >AUJOURD'HUI</text>
+<text x="44" y="294" fill="#fdf7fa" font-family="Arial, sans-serif" font-size="78" font-weight="750" >127</text>
+<text x="231" y="293" fill="#ffba75" font-family="Arial, sans-serif" font-size="18" font-weight="600" >puffs</text>
+<rect x="22" y="369" width="316" height="185" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="401" fill="#eee6ee" font-family="Arial, sans-serif" font-size="14" font-weight="700" >LES 14 DERNIERS JOURS</text>
+<rect x="48" y="399" width="11" height="24" rx="4" fill="#ff9a4c"/><rect x="67" y="377" width="11" height="46" rx="4" fill="#ffca75"/><rect x="86" y="387" width="11" height="36" rx="4" fill="#ffca75"/><rect x="105" y="365" width="11" height="58" rx="4" fill="#ff9a4c"/><rect x="124" y="337" width="11" height="86" rx="4" fill="#ffca75"/><rect x="143" y="376" width="11" height="47" rx="4" fill="#ffca75"/><rect x="162" y="333" width="11" height="90" rx="4" fill="#ff9a4c"/><rect x="181" y="361" width="11" height="62" rx="4" fill="#ffca75"/><rect x="200" y="348" width="11" height="75" rx="4" fill="#ffca75"/><rect x="219" y="324" width="11" height="99" rx="4" fill="#ff9a4c"/><rect x="238" y="358" width="11" height="65" rx="4" fill="#ffca75"/><rect x="257" y="373" width="11" height="50" rx="4" fill="#ffca75"/><rect x="276" y="339" width="11" height="84" rx="4" fill="#ff9a4c"/><rect x="295" y="353" width="11" height="70" rx="4" fill="#ffca75"/>
+<text x="47" y="532" fill="#958a95" font-family="Arial, sans-serif" font-size="11" font-weight="500" >LUN</text><text x="289" y="532" fill="#958a95" font-family="Arial, sans-serif" font-size="11" font-weight="500" >DIM</text>
+<rect x="22" y="572" width="148" height="109" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/><rect x="190" y="572" width="148" height="109" rx="20" fill="#17171f" stroke="#37313c" stroke-width="1.3"/>
+<text x="43" y="607" fill="#a8a0ab" font-family="Arial, sans-serif" font-size="12" font-weight="500" >7 JOURS</text><text x="43" y="660" fill="#f7eee9" font-family="Arial, sans-serif" font-size="38" font-weight="700" >842</text>
+<text x="211" y="607" fill="#a8a0ab" font-family="Arial, sans-serif" font-size="12" font-weight="500" >30 JOURS</text><text x="211" y="660" fill="#f7eee9" font-family="Arial, sans-serif" font-size="38" font-weight="700" >3 281</text>
+<rect x="18" y="698" width="324" height="64" rx="20" fill="#111117" stroke="#37313c" stroke-width="1.3"/>
+<text x="59" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">Accueil</text><text x="140" y="737" fill="#ffbf70" font-family="Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Puffs</text><circle cx="140" cy="714" r="3" fill="#ffca73"/><text x="221" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">VPC</text><text x="302" y="737" fill="#98929e" font-family="Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle">Thèmes</text>
+<rect x="124" y="769" width="112" height="5" rx="3" fill="#d8d4db"/>
+</svg>

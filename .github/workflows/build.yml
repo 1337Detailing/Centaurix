@@ -1,12 +1,23 @@
-name: Centaurix Android
+name: Centaurix Android APK
+
 on:
   push:
     branches: [main]
+    tags: ['v*']
+    paths-ignore:
+      - 'docs/**'
+      - 'website/**'
   workflow_dispatch:
+
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  android:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,19 +31,49 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
-      - name: Keep stable debug signing identity
+
+      # Debug build signing is for testing. Public production releases
+      # should use a separately protected release-signing key.
+      - name: Preserve debug signing between builds
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: centaurix-android-debug-identity-v1
-      - name: Test protocol against captured hardware response
-        run: gradle --no-daemon :app:testDebugUnitTest --stacktrace
-      - name: Assemble installable APK
+
+      - name: Run unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
+      - name: Build Android APK
         run: gradle --no-daemon :app:assembleDebug
-      - name: Validate APK archive
-        run: unzip -t app/build/outputs/apk/debug/app-debug.apk | tail -2
-      - uses: actions/upload-artifact@v4
+
+      - name: Package APK and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          test -n "$VERSION"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Centaurix-${VERSION}-debug.apk"
+          (cd dist && sha256sum ./*.apk > SHA256SUMS.txt)
+          unzip -t "dist/Centaurix-${VERSION}-debug.apk" | tail -n 2
+
+      - name: Publish workflow artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: Centaurix-1.0.0-beta5
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: Centaurix-APK-${{ github.run_number }}
+          path: dist/*
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish GitHub Release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          body: |
+            Android APK built from this tag (debug-signed test build).
+            Verify changes on the BT200 hardware before relying on Bluetooth profile writes.
+          files: |
+            dist/*.apk
+            dist/SHA256SUMS.txt
